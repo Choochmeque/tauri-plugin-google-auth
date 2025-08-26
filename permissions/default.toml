@@ -1,0 +1,7 @@
+[default]
+description = "Default permissions for the Google Auth plugin"
+permissions = [
+  "allow-sign-in",
+  "allow-sign-out",
+  "allow-refresh-token"
+]

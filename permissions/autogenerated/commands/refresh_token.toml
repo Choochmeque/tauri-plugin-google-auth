@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-refresh-token"
+description = "Enables the refresh_token command without any pre-configured scope."
+commands.allow = ["refresh_token"]
+
+[[permission]]
+identifier = "deny-refresh-token"
+description = "Denies the refresh_token command without any pre-configured scope."
+commands.deny = ["refresh_token"]
