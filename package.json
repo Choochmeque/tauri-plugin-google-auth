@@ -16,6 +16,24 @@
     "dist-js",
     "README.md"
   ],
+  "directories": {
+    "example": "examples"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Choochmeque/tauri-plugin-google-auth.git"
+  },
+  "keywords": [
+    "tauri",
+    "google oauth",
+    "authentication",
+    "signin"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Choochmeque/tauri-plugin-google-auth/issues"
+  },
+  "homepage": "https://github.com/Choochmeque/tauri-plugin-google-auth#readme",
   "scripts": {
     "build": "rollup -c",
     "prepublishOnly": "pnpm build",
