@@ -2,11 +2,13 @@
 name = "tauri-plugin-google-auth"
 version = "0.1.0"
 authors = [ "You" ]
-description = ""
+description = "A Tauri v2 plugin that enables Google OAuth authentication"
 edition = "2021"
 rust-version = "1.77.2"
 exclude = ["/examples", "/dist-js", "/guest-js", "/node_modules"]
 links = "tauri-plugin-google-auth"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/Choochmeque/tauri-plugin-google-auth"
 
 [dependencies]
 tauri = { version = "2.8.2" }
