@@ -12,6 +12,8 @@ pub struct SignInRequest {
   pub hosted_domain: Option<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
   pub login_hint: Option<String>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub redirect_uri: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

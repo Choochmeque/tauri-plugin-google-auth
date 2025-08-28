@@ -15,27 +15,11 @@ class SignInArgs: Decodable {
 class GoogleSignInPlugin: Plugin {
     private var currentSignInCompletion: ((Result<GIDGoogleUser, Error>) -> Void)?
     
-    func getTopViewController() -> UIViewController? {
-        guard let windowScene = UIApplication.shared.connectedScenes
-            .compactMap({ $0 as? UIWindowScene })
-            .first(where: { $0.activationState == .foregroundActive }),
-            let window = windowScene.windows.first(where: { $0.isKeyWindow }) else {
-            return nil
-        }
-
-        var topController = window.rootViewController
-        while let presented = topController?.presentedViewController {
-            topController = presented
-        }
-
-        return topController
-    }
-    
     @objc public func signIn(_ invoke: Invoke) throws {
         let args = try invoke.parseArgs(SignInArgs.self)
         
         DispatchQueue.main.async { [weak self] in
-            guard let rootViewController = self?.getTopViewController() else {
+            guard let rootViewController = self?.manager.viewController else {
                 invoke.reject("No root view controller found")
                 return
             }

@@ -34,11 +34,11 @@ import java.util.concurrent.TimeUnit
 @InvokeArg
 class SignInArgs {
     lateinit var clientId: String
-    lateinit var clientSecret: String?
+    var clientSecret: String? = null
     lateinit var scopes: List<String>
     var hostedDomain: String? = null
     var loginHint: String? = null
-    var redirectUri: String = "com.googleusercontent.apps:/oauth2redirect"
+    var redirectUri: String? = ""
 }
 
 
@@ -55,6 +55,7 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
         private const val KEY_TOKEN_EXPIRY = "token_expiry"
         private const val KEY_CLIENT_ID = "client_id"
         private const val KEY_CLIENT_SECRET = "client_secret"
+        private const val KEY_REDIRECT_URI = "redirect_uri"
         
         const val TITLE = "title"
         const val SUBTITLE = "subtitle"
@@ -111,7 +112,7 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
                 return
             }
             
-            saveCredentials(args.clientId, args.clientSecret)
+            saveCredentials(args.clientId, args.clientSecret, args.redirectUri)
             
             val intent = Intent(activity, GoogleSignInActivity::class.java).apply {
                 putExtra(CLIENT_ID, args.clientId)
@@ -162,6 +163,7 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
             try {
                 val clientId = sharedPreferences.getString(KEY_CLIENT_ID, null)
                 val clientSecret = sharedPreferences.getString(KEY_CLIENT_SECRET, null)
+                val redirectUri = sharedPreferences.getString(KEY_REDIRECT_URI, null) ?: ""
                 
                 if (clientId == null) {
                     invoke.reject("Client ID not found")
@@ -172,7 +174,7 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
                     authCode,
                     clientId,
                     clientSecret,
-                    "com.googleusercontent.apps.$clientId:/oauth2redirect"
+                    redirectUri
                 )
                 
                 saveTokens(tokenResponse)
@@ -306,10 +308,11 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
     }
     
     
-    private fun saveCredentials(clientId: String, clientSecret: String?) {
+    private fun saveCredentials(clientId: String, clientSecret: String?, redirectUri: String?) {
         sharedPreferences.edit().apply {
             putString(KEY_CLIENT_ID, clientId)
             clientSecret?.let { putString(KEY_CLIENT_SECRET, it) }
+            redirectUri?.let { putString(KEY_REDIRECT_URI, it) }
             apply()
         }
     }
