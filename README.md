@@ -91,25 +91,10 @@ Add to your `src-tauri/capabilities/default.json`:
 
 #### Android Setup
 
-1. **Configure Google Cloud Console**:
+ **Configure Google Cloud Console**:
    - Create OAuth 2.0 credentials
    - Add your app's SHA-1 fingerprint
    - Configure authorized redirect URIs
-
-2. **Update AndroidManifest.xml**:
-```xml
-<activity
-    android:name="GoogleSignInActivity"
-    android:exported="true"
-    android:launchMode="singleTask">
-    <intent-filter>
-        <action android:name="android.intent.action.VIEW" />
-        <category android:name="android.intent.category.DEFAULT" />
-        <category android:name="android.intent.category.BROWSABLE" />
-        <data android:scheme="YOUR_PACKAGE_NAME" />
-    </intent-filter>
-</activity>
-```
 
 See [ANDROID_SETUP.md](ANDROID_SETUP.md) for complete setup instructions.
 
