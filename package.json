@@ -1,6 +1,6 @@
 {
   "name": "@choochmeque/tauri-plugin-google-auth-api",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "author": "You",
   "description": "A Tauri v2 plugin that enables Google OAuth authentication",
   "type": "module",
