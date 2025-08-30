@@ -9,9 +9,11 @@ export interface TokenResponse {
 
 export interface SignInOptions {
   clientId: string
+  clientSecret?: string
   scopes?: string[]
   hostedDomain?: string
   loginHint?: string
+  redirectUri?: string
 }
 
 export interface SignInResponse {
