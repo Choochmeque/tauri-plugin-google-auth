@@ -19,6 +19,7 @@ import app.tauri.plugin.Plugin
 import com.google.android.gms.auth.api.identity.AuthorizationClient
 import com.google.android.gms.auth.api.identity.AuthorizationRequest
 import com.google.android.gms.auth.api.identity.Identity
+import com.google.android.gms.auth.api.identity.SignInClient
 import com.google.android.gms.common.api.Scope
 import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
@@ -77,6 +78,7 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
     private val gson = Gson()
     private lateinit var sharedPreferences: SharedPreferences
     private lateinit var authorizationClient: AuthorizationClient
+    private lateinit var signInClient: SignInClient
     
     override fun load(webView: WebView) {
         super.load(webView)
@@ -100,6 +102,7 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
         }
         
         authorizationClient = Identity.getAuthorizationClient(activity)
+        signInClient = Identity.getSignInClient(activity)
     }
     
     @Command
@@ -190,15 +193,42 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
     
     @Command
     fun signOut(invoke: Invoke) {
-        try {
-            clearStoredData()
-            
-            val ret = JSObject()
-            ret.put("success", true)
-            invoke.resolve(ret)
-        } catch (e: Exception) {
-            Log.e(TAG, "Sign-out failed", e)
-            invoke.reject("Sign-out failed: ${e.message}")
+        scope.launch {
+            try {
+                // Get the stored access token if available
+                val accessToken = sharedPreferences.getString(KEY_ACCESS_TOKEN, null)
+                
+                // Revoke the access token with Google's servers if it exists
+                if (accessToken != null) {
+                    try {
+                        revokeAccessToken(accessToken)
+                        Log.d(TAG, "Access token revoked successfully")
+                    } catch (e: Exception) {
+                        // Log the error but continue with sign-out
+                        // Token might already be invalid or network might be unavailable
+                        Log.w(TAG, "Failed to revoke access token: ${e.message}")
+                    }
+                }
+                
+                // Sign out from Google Sign-In client to clear the cached account
+                // This ensures account selection prompt on next sign-in
+                try {
+                    signInClient.signOut().await()
+                    Log.d(TAG, "Signed out from Google Sign-In client")
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to sign out from Google Sign-In client: ${e.message}")
+                }
+                
+                // Clear all locally stored authentication data
+                clearStoredData()
+                
+                val ret = JSObject()
+                ret.put("success", true)
+                invoke.resolve(ret)
+            } catch (e: Exception) {
+                Log.e(TAG, "Sign-out failed", e)
+                invoke.reject("Sign-out failed: ${e.message}")
+            }
         }
     }
     
@@ -293,6 +323,28 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
         gson.fromJson(responseBody, Map::class.java) as Map<String, Any?>
     }
     
+    private suspend fun revokeAccessToken(accessToken: String) = withContext(Dispatchers.IO) {
+        val formBody = FormBody.Builder()
+            .add("token", accessToken)
+            .build()
+        
+        val request = Request.Builder()
+            .url("https://oauth2.googleapis.com/revoke")
+            .post(formBody)
+            .build()
+        
+        val response = httpClient.newCall(request).execute()
+        
+        if (!response.isSuccessful) {
+            val errorBody = response.body?.string()
+            Log.w(TAG, "Token revocation response: $errorBody")
+            // Google's revocation endpoint returns 400 if token is already invalid
+            // We don't throw here as this is not critical for sign-out
+            if (response.code != 400) {
+                throw Exception("Token revocation failed with code ${response.code}")
+            }
+        }
+    }
     
     private fun saveTokens(tokenResponse: Map<String, Any?>) {
         val expiresIn = (tokenResponse["expires_in"] as? Number)?.toLong() ?: 3600
