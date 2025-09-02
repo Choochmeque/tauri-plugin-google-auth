@@ -24,7 +24,7 @@ Add the plugin to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-tauri-plugin-google-auth = "0.1.3"
+tauri-plugin-google-auth = "0.2.0"
 ```
 
 ### JavaScript/TypeScript
