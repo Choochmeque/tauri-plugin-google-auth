@@ -16,5 +16,11 @@ serde = "1.0"
 serde_json = "1"
 thiserror = "2"
 
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+oauth2 = { version = "5", features = ["reqwest-blocking"] }
+url = "2.5"
+open = "5"
+uuid = { version = "1.10", features = ["v7"] }
+
 [build-dependencies]
 tauri-plugin = { version = "2.4.0", features = ["build"] }

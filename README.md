@@ -10,9 +10,11 @@ A Tauri v2 plugin for Google OAuth authentication, providing seamless Google Sig
 
 - 🔐 **Secure OAuth 2.0 Authentication** - Full OAuth 2.0 implementation with PKCE support
 - 📱 **Mobile Support** - Native iOS and Android implementations using platform-specific APIs
-- 🔄 **Token Management** - Automatic token refresh and secure storage
-- 🎯 **TypeScript Support** - Fully typed API for better developer experience
-- 🛡️ **Security First** - Encrypted token storage and proper permission management
+- 🖥️ **Desktop Support** - OAuth2 flow with local redirect server for macOS, Windows, and Linux
+- 🔄 **Token Management** - Token refresh and revocation support
+- 🎯 **TypeScript Support** - Fully typed API with comprehensive JSDoc documentation
+- 🛡️ **Security First** - PKCE, secure redirect handling, and proper error management
+- ⚙️ **Flexible Configuration** - Customizable redirect URIs, HTML responses, and dynamic port binding
 
 ## Installation
 
@@ -91,12 +93,30 @@ Add to your `src-tauri/capabilities/default.json`:
 
 #### Android Setup
 
- **Configure Google Cloud Console**:
+**Configure Google Cloud Console**:
    - Create OAuth 2.0 credentials
    - Add your app's SHA-1 fingerprint
    - Configure authorized redirect URIs
 
 See [ANDROID_SETUP.md](ANDROID_SETUP.md) for complete setup instructions.
+
+#### Desktop Setup (macOS, Windows, Linux)
+
+**Configure Google Cloud Console**:
+   - Create OAuth 2.0 credentials (Web application type)
+   - Add `http://localhost` to authorized redirect URIs
+   - Note: The plugin handles dynamic port allocation automatically
+
+**Required fields for desktop**:
+   - `clientId`: Your Google OAuth client ID
+   - `clientSecret`: Your Google OAuth client secret (required for desktop)
+   - `scopes`: At least one scope is required
+
+The desktop implementation uses a local redirect server that:
+   - Binds to an available port (or specific port if provided via `redirectUri`)
+   - Opens the authorization URL in the default browser
+   - Captures the authorization code from the redirect
+   - Displays a customizable success message to the user
 
 ## Usage
 
@@ -110,10 +130,12 @@ async function authenticateUser() {
   try {
     const response = await signIn({
       clientId: 'YOUR_GOOGLE_CLIENT_ID',
-      scopes: ['email', 'profile'],
+      clientSecret: 'YOUR_CLIENT_SECRET', // Required for desktop platforms
+      scopes: ['openid', 'email', 'profile'],
       hostedDomain: 'example.com', // Optional: restrict to specific domain
-      loginHint: 'user@example.com' // Optional: pre-fill email
-    });
+      loginHint: 'user@example.com', // Optional: pre-fill email
+      redirectUri: 'http://localhost:8080', // Optional: specify custom redirect URI
+      successHtmlResponse: '<h1>Success!</h1>' // Optional: custom success message (desktop)
     
     console.log('ID Token:', response.idToken);
     console.log('Access Token:', response.accessToken);
@@ -125,9 +147,12 @@ async function authenticateUser() {
 }
 
 // Sign out
-async function logout() {
+async function logout(accessToken?: string) {
   try {
-    await signOut();
+    // With token revocation (recommended)
+    await signOut({ accessToken });
+    // Or local sign-out only
+    // await signOut();
     console.log('Successfully signed out');
   } catch (error) {
     console.error('Sign out failed:', error);
@@ -173,12 +198,13 @@ const response = await signIn({
 
 ```typescript
 interface SignInOptions {
-  clientId: string;           // Required: Google OAuth client ID
-  clientSecret?: string;      // Optional: Client secret for certain flows
-  scopes?: string[];         // OAuth scopes to request
-  hostedDomain?: string;     // Restrict authentication to a specific domain
-  loginHint?: string;        // Email hint to pre-fill in the sign-in form
-  redirectUri?: string;      // Custom redirect URI
+  clientId: string;              // Required: Google OAuth client ID
+  clientSecret?: string;         // Required for desktop platforms
+  scopes?: string[];            // OAuth scopes to request (openid added automatically)
+  hostedDomain?: string;        // Restrict authentication to a specific domain
+  loginHint?: string;           // Email hint to pre-fill in the sign-in form
+  redirectUri?: string;         // Custom redirect URI (desktop: defaults to random port)
+  successHtmlResponse?: string; // Custom HTML shown after auth (desktop only)
 }
 ```
 
@@ -186,10 +212,10 @@ interface SignInOptions {
 
 ```typescript
 interface TokenResponse {
-  idToken: string;           // JWT ID token containing user information
+  idToken: string;           // JWT ID token (UUID v7 placeholder on desktop currently)
   accessToken: string;       // OAuth access token for API calls
   refreshToken?: string;     // Refresh token (when offline access is granted)
-  expiresAt?: number;       // Token expiration timestamp (milliseconds since epoch)
+  expiresAt?: number;       // Token expiration timestamp (seconds since epoch)
 }
 ```
 
@@ -198,8 +224,14 @@ interface TokenResponse {
 #### `signIn(options: SignInOptions): Promise<TokenResponse>`
 Initiates the Google Sign-In flow with the specified options.
 
-#### `signOut(): Promise<void>`
-Signs out the current user and clears stored credentials.
+#### `signOut(options?: SignOutOptions): Promise<void>`
+Signs out the current user. Can optionally revoke the access token with Google.
+
+```typescript
+interface SignOutOptions {
+  accessToken?: string;  // Token to revoke (if not provided, local sign-out only)
+}
+```
 
 #### `refreshToken(): Promise<TokenResponse>`
 Refreshes the current access token using the stored refresh token.
@@ -237,18 +269,27 @@ try {
 |----------|--------|---------------|
 | iOS      | ✅ Supported | Native Google Sign-In SDK |
 | Android  | ✅ Supported | Credential Manager API |
-| macOS    | 🚧 Planned | Coming soon |
-| Windows  | 🚧 Planned | Coming soon |
-| Linux    | 🚧 Planned | Coming soon |
+| macOS    | ✅ Supported | OAuth2 with local redirect server |
+| Windows  | ✅ Supported | OAuth2 with local redirect server |
+| Linux    | ✅ Supported | OAuth2 with local redirect server |
 
 ## Security Considerations
 
 - **Token Storage**: Tokens are stored securely using platform-specific encryption
   - iOS: Keychain Services
   - Android: Encrypted SharedPreferences
+  - Desktop: Application memory (implement secure storage as needed)
 - **HTTPS Only**: All OAuth flows use HTTPS for secure communication
-- **PKCE**: Implements Proof Key for Code Exchange for enhanced security
+- **PKCE**: Implements Proof Key for Code Exchange for enhanced security on all platforms
+- **SSRF Protection**: HTTP client configured to prevent redirect vulnerabilities
+- **Dynamic Port Binding**: Desktop platforms use random available ports by default
+- **Token Revocation**: Supports proper token revocation with Google's revocation endpoint
 - **Permission System**: Fine-grained permissions control access to authentication methods
+
+## Known Issues
+
+### Desktop Platforms
+- **Token Refresh Not Implemented**: The `refreshToken()` function is not yet implemented for desktop platforms (macOS, Windows, Linux). You'll need to implement your own token refresh logic using the refresh token returned from the initial sign-in.
 
 ## Troubleshooting
 
@@ -263,7 +304,12 @@ try {
 - Ensure your package name matches the one in Google Cloud Console
 - Verify internet permissions are granted
 
-#### Token refresh fails
+#### Desktop: Token refresh fails
+- Note: Token refresh is not yet implemented for desktop platforms
+- Store the refresh token from initial sign-in and implement your own refresh logic
+- Ensure offline access scope is requested during initial sign-in
+
+#### Token refresh fails (Mobile)
 - Ensure offline access scope is requested during initial sign-in
 - Check that refresh token is being stored properly
 - Verify client secret is provided if required by your OAuth configuration
