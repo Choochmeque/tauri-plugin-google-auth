@@ -2,7 +2,7 @@
 
 [![Crates.io](https://img.shields.io/crates/v/tauri-plugin-google-auth)](https://crates.io/crates/tauri-plugin-google-auth)
 [![npm](https://img.shields.io/npm/v/@choochmeque/tauri-plugin-google-auth-api)](https://www.npmjs.com/package/@choochmeque/tauri-plugin-google-auth-api)
-[![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 A Tauri v2 plugin for Google OAuth authentication, providing seamless Google Sign-In integration for mobile and desktop applications.
 
@@ -326,12 +326,7 @@ Contributions are welcome! Please feel free to submit a Pull Request. For major 
 
 ## License
 
-This project is dual-licensed under either:
-
-- MIT License ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
-- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
-
-at your option.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 
