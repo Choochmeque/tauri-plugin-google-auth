@@ -7,7 +7,7 @@ edition = "2021"
 rust-version = "1.77.2"
 exclude = ["/examples", "/dist-js", "/guest-js", "/node_modules"]
 links = "tauri-plugin-google-auth"
-license = "MIT OR Apache-2.0"
+license = "MIT"
 repository = "https://github.com/Choochmeque/tauri-plugin-google-auth"
 
 [dependencies]
