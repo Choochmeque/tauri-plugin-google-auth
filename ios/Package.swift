@@ -18,7 +18,7 @@ let package = Package(
     ],
     dependencies: [
         .package(name: "Tauri", path: "../.tauri/tauri-api"),
-        .package(url: "https://github.com/Choochmeque/GoogleSignIn-iOS", from: "9.0.3")
+        .package(url: "https://github.com/Choochmeque/SimpleGoogleSignIn.git", from: "1.0.0"),
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
@@ -27,8 +27,7 @@ let package = Package(
             name: "tauri-plugin-google-auth",
             dependencies: [
                 .byName(name: "Tauri"),
-                .product(name: "GoogleSignIn", package: "GoogleSignIn-iOS"),
-                .product(name: "GoogleSignInSwift", package: "GoogleSignIn-iOS")
+                .product(name: "SimpleGoogleSignIn", package: "SimpleGoogleSignIn")
             ],
             path: "Sources")
     ]
