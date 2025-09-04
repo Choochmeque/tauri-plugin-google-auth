@@ -24,7 +24,7 @@ Add the plugin to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-tauri-plugin-google-auth = "0.2.1"
+tauri-plugin-google-auth = "0.3"
 ```
 
 ### JavaScript/TypeScript
@@ -285,11 +285,6 @@ try {
 - **Dynamic Port Binding**: Desktop platforms use random available ports by default
 - **Token Revocation**: Supports proper token revocation with Google's revocation endpoint
 - **Permission System**: Fine-grained permissions control access to authentication methods
-
-## Known Issues
-
-### Desktop Platforms
-- **Token Refresh Not Implemented**: The `refreshToken()` function is not yet implemented for desktop platforms (macOS, Windows, Linux). You'll need to implement your own token refresh logic using the refresh token returned from the initial sign-in.
 
 ## Troubleshooting
 
