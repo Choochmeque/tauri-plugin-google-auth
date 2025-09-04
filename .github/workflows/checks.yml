@@ -5,7 +5,7 @@ on: [ pull_request, push ]
 jobs:
   # Code formatting.
   fmt:
-    name: Rustfmt
+    name: cargo-fmt
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,9 +26,14 @@ jobs:
 
   # Static analyzer.
   clippy:
-    name: Clippy
+    name: cargo-clippy
     runs-on: ubuntu-latest
     steps:
+      - uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf llvm-dev clang cmake grcov
+          version: "1.0"  # bump this to invalidate the cache when needed
+
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo clippy --all-targets --all-features -- -D warnings
@@ -38,6 +43,11 @@ jobs:
     name: Deadlinks
     runs-on: ubuntu-latest
     steps:
+      - uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf llvm-dev clang cmake grcov
+          version: "1.0"  # bump this to invalidate the cache when needed
+          
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo install cargo-deadlinks
