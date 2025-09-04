@@ -47,7 +47,7 @@ jobs:
         with:
           packages: libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf llvm-dev clang cmake grcov
           version: "1.0"  # bump this to invalidate the cache when needed
-          
+
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo install cargo-deadlinks
@@ -94,6 +94,11 @@ jobs:
     name: cargo-semver
     runs-on: ubuntu-latest
     steps:
+      - uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf llvm-dev clang cmake grcov
+          version: "1.0"  # bump this to invalidate the cache when needed
+          
       - uses: actions/checkout@v4
       - uses: obi1kenobi/cargo-semver-checks-action@v2
 

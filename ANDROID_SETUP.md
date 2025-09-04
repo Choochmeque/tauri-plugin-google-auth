@@ -258,4 +258,4 @@ To test on an Android emulator:
 - [OAuth 2.0 for Mobile Apps](https://developers.google.com/identity/protocols/oauth2/native-app)
 - [Google OAuth 2.0 Scopes](https://developers.google.com/identity/protocols/oauth2/scopes)
 - [ID Token Verification](https://developers.google.com/identity/sign-in/android/backend-auth)
-- [Tauri Mobile Documentation](https://tauri.app/v1/guides/building/mobile)
+- [Tauri Mobile Documentation](https://tauri.app/develop/#developing-your-mobile-application)

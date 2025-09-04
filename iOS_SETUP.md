@@ -187,4 +187,4 @@ The plugin provides detailed error messages for common scenarios:
 
 - [Google Sign-In iOS Documentation](https://developers.google.com/identity/sign-in/ios)
 - [Google OAuth 2.0 Scopes](https://developers.google.com/identity/protocols/oauth2/scopes)
-- [Tauri Mobile Documentation](https://tauri.app/v1/guides/building/mobile)
+- [Tauri Mobile Documentation](https://tauri.app/develop/#developing-your-mobile-application)
