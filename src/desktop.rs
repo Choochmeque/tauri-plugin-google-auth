@@ -80,7 +80,7 @@ impl<R: Runtime> GoogleAuth<R> {
         // Parse redirect URI and extract port if provided
         let (redirect_host, port) = if let Some(redirect_uri) = &payload.redirect_uri {
             let parsed_url = Url::parse(redirect_uri).map_err(|e| {
-                crate::Error::ConfigurationError(format!("Invalid redirect URI: {}", e))
+                crate::Error::ConfigurationError(format!("Invalid redirect URI: {e}"))
             })?;
 
             let host = parsed_url.host_str().ok_or_else(|| {
@@ -118,24 +118,24 @@ impl<R: Runtime> GoogleAuth<R> {
         // Bind to the TCP listener first to get the actual port
         let listener = if let Some(p) = port {
             // Try to bind to the specific port
-            TcpListener::bind(format!("{}:{}", LOCALHOST_ADDR, p)).map_err(|e| {
-                crate::Error::NetworkError(format!("Failed to bind to port {}: {}", p, e))
+            TcpListener::bind(format!("{LOCALHOST_ADDR}:{p}")).map_err(|e| {
+                crate::Error::NetworkError(format!("Failed to bind to port {p}: {e}"))
             })?
         } else {
             // Bind to any available port (port 0 means OS assigns an available port)
-            TcpListener::bind(format!("{}:0", LOCALHOST_ADDR)).map_err(|e| {
-                crate::Error::NetworkError(format!("Failed to bind to any available port: {}", e))
+            TcpListener::bind(format!("{LOCALHOST_ADDR}:0")).map_err(|e| {
+                crate::Error::NetworkError(format!("Failed to bind to any available port: {e}"))
             })?
         };
 
         // Get the actual port that was bound
         let actual_port = listener
             .local_addr()
-            .map_err(|e| crate::Error::NetworkError(format!("Failed to get local address: {}", e)))?
+            .map_err(|e| crate::Error::NetworkError(format!("Failed to get local address: {e}")))?
             .port();
 
         // Construct the redirect URL with the actual port
-        let redirect_url = format!("http://{}:{}", redirect_host, actual_port);
+        let redirect_url = format!("http://{redirect_host}:{actual_port}");
 
         // Set up the config for the Google OAuth2 process.
         let client = SpecialClient::new(google_client_id)
@@ -170,7 +170,7 @@ impl<R: Runtime> GoogleAuth<R> {
 
         // Open the authorization URL in the browser
         open::that(authorize_url.to_string())
-            .map_err(|e| crate::Error::NetworkError(format!("Failed to open browser: {}", e)))?;
+            .map_err(|e| crate::Error::NetworkError(format!("Failed to open browser: {e}")))?;
 
         // Get the success HTML response message (use custom if provided, otherwise default)
         let success_message = payload
@@ -194,9 +194,9 @@ impl<R: Runtime> GoogleAuth<R> {
             let request_path = request_line.split_whitespace().nth(1).ok_or_else(|| {
                 crate::Error::NetworkError("Invalid HTTP request format".to_string())
             })?;
-            let url = Url::parse(&(format!("http://{}{}", DEFAULT_REDIRECT_HOST, request_path)))
+            let url = Url::parse(&(format!("http://{DEFAULT_REDIRECT_HOST}{request_path}")))
                 .map_err(|e| {
-                    crate::Error::NetworkError(format!("Failed to parse redirect URL: {}", e))
+                    crate::Error::NetworkError(format!("Failed to parse redirect URL: {e}"))
                 })?;
 
             let code = url
@@ -236,7 +236,7 @@ impl<R: Runtime> GoogleAuth<R> {
                 .redirect(oauth2::reqwest::redirect::Policy::none())
                 .build()
                 .map_err(|e| {
-                    crate::Error::NetworkError(format!("Failed to build HTTP client: {}", e))
+                    crate::Error::NetworkError(format!("Failed to build HTTP client: {e}"))
                 })?;
 
             // Exchange the code with a token.
@@ -246,8 +246,7 @@ impl<R: Runtime> GoogleAuth<R> {
                 .request(&http_client)
                 .map_err(|e| {
                     crate::Error::AuthenticationFailed(format!(
-                        "Failed to exchange code for token: {}",
-                        e
+                        "Failed to exchange code for token: {e}"
                     ))
                 })?;
 
@@ -266,7 +265,7 @@ impl<R: Runtime> GoogleAuth<R> {
             access_token: token_response.access_token().secret().to_string(),
             scopes: token_response
                 .scopes()
-                .map(|s| s.into_iter().map(|sc| sc.as_ref().to_string()).collect())
+                .map(|s| s.iter().map(|sc| sc.as_ref().to_string()).collect())
                 .unwrap_or_else(Vec::new),
             refresh_token: token_response
                 .refresh_token()
@@ -294,7 +293,7 @@ impl<R: Runtime> GoogleAuth<R> {
                 .redirect(oauth2::reqwest::redirect::Policy::none())
                 .build()
                 .map_err(|e| {
-                    crate::Error::NetworkError(format!("Failed to build HTTP client: {}", e))
+                    crate::Error::NetworkError(format!("Failed to build HTTP client: {e}"))
                 })?;
 
             // Send revocation request
@@ -302,9 +301,7 @@ impl<R: Runtime> GoogleAuth<R> {
                 .post(GOOGLE_REVOCATION_URL)
                 .form(&[("token", access_token.as_str())])
                 .send()
-                .map_err(|e| {
-                    crate::Error::NetworkError(format!("Failed to revoke token: {}", e))
-                })?;
+                .map_err(|e| crate::Error::NetworkError(format!("Failed to revoke token: {e}")))?;
 
             Ok(response)
         })
@@ -355,7 +352,7 @@ impl<R: Runtime> GoogleAuth<R> {
                 .redirect(oauth2::reqwest::redirect::Policy::none())
                 .build()
                 .map_err(|e| {
-                    crate::Error::NetworkError(format!("Failed to build HTTP client: {}", e))
+                    crate::Error::NetworkError(format!("Failed to build HTTP client: {e}"))
                 })?;
 
             // Exchange the refresh token for new tokens
@@ -363,7 +360,7 @@ impl<R: Runtime> GoogleAuth<R> {
                 .exchange_refresh_token(&oauth2::RefreshToken::new(refresh_token))
                 .request(&http_client)
                 .map_err(|e| {
-                    crate::Error::AuthenticationFailed(format!("Failed to refresh token: {}", e))
+                    crate::Error::AuthenticationFailed(format!("Failed to refresh token: {e}"))
                 })?;
 
             Ok(token_response)
@@ -381,7 +378,7 @@ impl<R: Runtime> GoogleAuth<R> {
             access_token: token_response.access_token().secret().to_string(),
             scopes: token_response
                 .scopes()
-                .map(|s| s.into_iter().map(|sc| sc.as_ref().to_string()).collect())
+                .map(|s| s.iter().map(|sc| sc.as_ref().to_string()).collect())
                 .unwrap_or_else(Vec::new),
             refresh_token: token_response
                 .refresh_token()
