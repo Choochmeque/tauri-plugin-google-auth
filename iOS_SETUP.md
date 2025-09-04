@@ -57,18 +57,7 @@ Add the following to your app's `Info.plist` file:
 
 ### AppDelegate Configuration
 
-In your iOS app's `AppDelegate.swift`, add URL handling for Google Sign-In callbacks:
-
-```swift
-import GoogleSignIn
-
-// In your AppDelegate class
-func application(_ app: UIApplication,
-                 open url: URL,
-                 options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
-    return GIDSignIn.sharedInstance.handle(url)
-}
-```
+The plugin uses SimpleGoogleSignIn library which handles the authentication flow automatically. No additional AppDelegate configuration is required as the plugin manages the URL handling internally.
 
 ## Step 3: Using the Plugin in Your Tauri App
 
@@ -84,7 +73,7 @@ cargo add tauri-plugin-google-auth
 ### JavaScript/TypeScript Usage
 
 ```typescript
-import { signIn, signOut, refreshToken } from 'tauri-plugin-google-auth';
+import { signIn, signOut, refreshToken } from '@choochmeque/tauri-plugin-google-auth-api';
 
 // Sign in
 async function handleSignIn() {
@@ -139,7 +128,7 @@ async function refreshUserToken() {
 2. Open the generated Xcode project and run on a device or simulator
 
 3. Test the sign-in flow:
-   - The Google Sign-In SDK will present a native authentication view
+   - The SimpleGoogleSignIn library will present a native authentication view
    - Users can sign in with their Google account
    - The plugin will return the user profile and tokens
 
@@ -190,7 +179,7 @@ The plugin provides detailed error messages for common scenarios:
 
 2. **URL scheme errors**: Double-check that your reversed client ID in Info.plist matches exactly
 
-3. **Sign-in window doesn't appear**: Verify that the Google Sign-In SDK is properly linked and that you're calling from the main thread
+3. **Sign-in window doesn't appear**: Verify that the SimpleGoogleSignIn library is properly linked and that you're calling from the main thread
 
 4. **Token refresh fails**: Some tokens may expire - implement proper error handling and re-authentication flow
 

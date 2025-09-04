@@ -1,18 +1,48 @@
+use oauth2::basic::{
+    BasicErrorResponse, BasicRevocationErrorResponse, BasicTokenIntrospectionResponse,
+    BasicTokenType,
+};
 use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 use tauri::{plugin::PluginApi, AppHandle, Runtime};
 
-use oauth2::{basic::BasicClient, TokenResponse};
 use oauth2::{
-    AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, PkceCodeChallenge, RedirectUrl,
-    RevocationUrl, Scope, TokenUrl,
+    AuthUrl, AuthorizationCode, Client, ClientId, ClientSecret, CsrfToken, EndpointNotSet,
+    ExtraTokenFields, PkceCodeChallenge, RedirectUrl, RevocationUrl, Scope, StandardRevocableToken,
+    StandardTokenResponse, TokenResponse, TokenUrl,
 };
 use url::Url;
-use uuid::Uuid;
 
 use std::io::{BufRead, BufReader, Write};
 use std::net::TcpListener;
 
 use crate::models::*;
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
+pub struct GoogleTokenFields {
+    pub id_token: Option<String>,
+}
+impl ExtraTokenFields for GoogleTokenFields {}
+
+type SpecialTokenResponse = StandardTokenResponse<GoogleTokenFields, BasicTokenType>;
+type SpecialClient<
+    HasAuthUrl = EndpointNotSet,
+    HasDeviceAuthUrl = EndpointNotSet,
+    HasIntrospectionUrl = EndpointNotSet,
+    HasRevocationUrl = EndpointNotSet,
+    HasTokenUrl = EndpointNotSet,
+> = Client<
+    BasicErrorResponse,
+    SpecialTokenResponse,
+    BasicTokenIntrospectionResponse,
+    StandardRevocableToken,
+    BasicRevocationErrorResponse,
+    HasAuthUrl,
+    HasDeviceAuthUrl,
+    HasIntrospectionUrl,
+    HasRevocationUrl,
+    HasTokenUrl,
+>;
 
 // Google OAuth2 URL constants
 const GOOGLE_AUTH_URL: &str = "https://accounts.google.com/o/oauth2/auth";
@@ -33,7 +63,7 @@ pub fn init<R: Runtime, C: DeserializeOwned>(
 pub struct GoogleAuth<R: Runtime>(AppHandle<R>);
 
 impl<R: Runtime> GoogleAuth<R> {
-    pub fn sign_in(&self, payload: SignInRequest) -> crate::Result<SignInResponse> {
+    pub fn sign_in(&self, payload: SignInRequest) -> crate::Result<crate::TokenResponse> {
         // Validate that scopes are provided
         let scopes = payload.scopes.ok_or_else(|| {
             crate::Error::ConfigurationError(
@@ -108,7 +138,7 @@ impl<R: Runtime> GoogleAuth<R> {
         let redirect_url = format!("http://{}:{}", redirect_host, actual_port);
 
         // Set up the config for the Google OAuth2 process.
-        let client = BasicClient::new(google_client_id)
+        let client = SpecialClient::new(google_client_id)
             .set_client_secret(google_client_secret)
             .set_auth_uri(auth_url)
             .set_token_uri(token_url)
@@ -228,10 +258,16 @@ impl<R: Runtime> GoogleAuth<R> {
             crate::Error::AuthenticationFailed("Token exchange thread panicked".to_string())
         })??;
 
+        let id_token = token_response.extra_fields().id_token.clone();
+
         // Return the token response
-        Ok(SignInResponse {
-            id_token: Uuid::now_v7().to_string(), // Generate a UUID v7 for id_token
+        Ok(crate::TokenResponse {
+            id_token,
             access_token: token_response.access_token().secret().to_string(),
+            scopes: token_response
+                .scopes()
+                .map(|s| s.into_iter().map(|sc| sc.as_ref().to_string()).collect())
+                .unwrap_or_else(Vec::new),
             refresh_token: token_response
                 .refresh_token()
                 .map(|t| t.secret().to_string()),
@@ -289,10 +325,74 @@ impl<R: Runtime> GoogleAuth<R> {
 
     pub fn refresh_token(
         &self,
-        _payload: RefreshTokenRequest,
-    ) -> crate::Result<RefreshTokenResponse> {
-        Err(crate::Error::ConfigurationError(
-            "Google Sign-In refresh token is not implemented for desktop platforms yet".to_string(),
-        ))
+        payload: RefreshTokenRequest,
+    ) -> crate::Result<crate::TokenResponse> {
+        // Client secret is required for desktop authentication
+        let google_client_secret = payload.client_secret.ok_or_else(|| {
+            crate::Error::ConfigurationError(
+                "Client secret is required for desktop authentication".to_string(),
+            )
+        })?;
+
+        // Create OAuth2 client without needing redirect URI for refresh
+        let google_client_id = ClientId::new(payload.client_id);
+        let google_client_secret = ClientSecret::new(google_client_secret);
+
+        let token_url = TokenUrl::new(GOOGLE_TOKEN_URL.to_string()).map_err(|_| {
+            crate::Error::ConfigurationError("Invalid token endpoint URL".to_string())
+        })?;
+
+        // Create a basic client for token refresh
+        let client = SpecialClient::new(google_client_id)
+            .set_client_secret(google_client_secret)
+            .set_token_uri(token_url);
+
+        // Execute the refresh token request in a thread
+        let refresh_token = payload.refresh_token;
+        let token_response = std::thread::spawn(move || -> crate::Result<_> {
+            // Create HTTP client with proper security settings
+            let http_client = oauth2::reqwest::blocking::Client::builder()
+                .redirect(oauth2::reqwest::redirect::Policy::none())
+                .build()
+                .map_err(|e| {
+                    crate::Error::NetworkError(format!("Failed to build HTTP client: {}", e))
+                })?;
+
+            // Exchange the refresh token for new tokens
+            let token_response = client
+                .exchange_refresh_token(&oauth2::RefreshToken::new(refresh_token))
+                .request(&http_client)
+                .map_err(|e| {
+                    crate::Error::AuthenticationFailed(format!("Failed to refresh token: {}", e))
+                })?;
+
+            Ok(token_response)
+        })
+        .join()
+        .map_err(|_| {
+            crate::Error::AuthenticationFailed("Token refresh thread panicked".to_string())
+        })??;
+
+        let id_token = token_response.extra_fields().id_token.clone();
+
+        // Return the refreshed token response
+        Ok(crate::TokenResponse {
+            id_token,
+            access_token: token_response.access_token().secret().to_string(),
+            scopes: token_response
+                .scopes()
+                .map(|s| s.into_iter().map(|sc| sc.as_ref().to_string()).collect())
+                .unwrap_or_else(Vec::new),
+            refresh_token: token_response
+                .refresh_token()
+                .map(|t| t.secret().to_string()),
+            expires_at: token_response.expires_in().map(|d| {
+                let now = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs() as i64;
+                now + d.as_secs() as i64
+            }),
+        })
     }
 }

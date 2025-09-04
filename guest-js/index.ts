@@ -5,9 +5,11 @@ import { invoke } from '@tauri-apps/api/core'
  */
 export interface TokenResponse {
   /** JWT ID token containing user information (requires 'openid' scope) */
-  idToken: string
+  idToken?: string
   /** Access token for making API requests */
   accessToken: string
+  /** List of scopes granted with the access token */
+  scopes: string[]
   /** Refresh token for obtaining new access tokens (optional) */
   refreshToken?: string
   /** Unix timestamp (seconds) when the access token expires */
@@ -35,28 +37,6 @@ export interface SignInOptions {
 }
 
 /**
- * Response from a successful sign-in operation
- * @internal Used internally, same as TokenResponse
- */
-export interface SignInResponse {
-  idToken: string
-  accessToken: string
-  refreshToken?: string
-  expiresAt?: number
-}
-
-/**
- * Response from a token refresh operation
- * @internal Used internally, same as TokenResponse
- */
-export interface RefreshTokenResponse {
-  idToken: string
-  accessToken: string
-  refreshToken?: string
-  expiresAt?: number
-}
-
-/**
  * Initiates Google OAuth2 sign-in flow
  * 
  * @param options - Configuration for the sign-in flow
@@ -76,7 +56,7 @@ export interface RefreshTokenResponse {
  * @throws {Error} If authentication fails or user cancels the flow
  */
 export async function signIn(options: SignInOptions): Promise<TokenResponse> {
-  const response = await invoke<SignInResponse>('plugin:google-auth|sign_in', {
+  const response = await invoke<TokenResponse>('plugin:google-auth|sign_in', {
     payload: options,
   });
   return response;
@@ -126,7 +106,7 @@ export async function signOut(options?: SignOutOptions): Promise<void> {
  * @note Not yet implemented for desktop platforms
  */
 export async function refreshToken(): Promise<TokenResponse> {
-  const response = await invoke<RefreshTokenResponse>('plugin:google-auth|refresh_token', {
+  const response = await invoke<TokenResponse>('plugin:google-auth|refresh_token', {
     payload: {},
   });
   return response;

@@ -1,8 +1,6 @@
-# Android Google Sign-In Setup Guide (Using Credential Manager API)
+# Android Google Sign-In Setup Guide
 
-This guide will help you configure Google Sign-In for your Android app using the modern **Credential Manager API** with the `tauri-plugin-google-auth` plugin.
-
-> **Note**: This implementation uses Google's new Credential Manager API which replaces the deprecated GoogleSignIn API. Credential Manager provides a more secure and unified authentication experience.
+This guide will help you configure Google Sign-In for your Android app using the `tauri-plugin-google-auth` plugin.
 
 ## Prerequisites
 
@@ -19,7 +17,7 @@ This guide will help you configure Google Sign-In for your Android app using the
 2. Create a new project or select an existing one
 3. Enable required APIs:
    - Navigate to "APIs & Services" > "Library"
-   - Search for and enable "Google Identity Toolkit API"
+   - Search for and enable "Google Sign-In API" or "Google Identity Toolkit API"
 
 4. Create OAuth 2.0 credentials:
    - Go to "APIs & Services" > "Credentials"
@@ -28,6 +26,7 @@ This guide will help you configure Google Sign-In for your Android app using the
    - Enter your app's package name (e.g., `com.example.myapp`)
    - Provide the SHA-1 certificate fingerprint (see below)
    - Click "Create"
+   - Save the Client ID (you'll need it in your app)
 
 ### 1.2 Get SHA-1 Certificate Fingerprint
 
@@ -47,16 +46,15 @@ keytool -list -v -keystore your-release-key.keystore -alias your-key-alias
 
 Copy the SHA-1 fingerprint and add it to your OAuth 2.0 Android client configuration in Google Cloud Console.
 
-### 1.3 Configure Web Client (Required for ID Token)
+### 1.3 Configure Additional Client (Optional)
 
-**Important**: For Android with Credential Manager, you need a **Web OAuth 2.0 client ID**:
+For some OAuth flows, you may also need a Web client:
 
 1. In Google Cloud Console, create another OAuth 2.0 client
 2. Select "Web application" as the application type
-3. Give it a name (e.g., "Android Web Client for Credential Manager")
-4. You don't need to add any authorized URLs for mobile use
-5. Click "Create" and copy the **Web Client ID**
-6. **Use this Web Client ID in your Android app's `signIn` method**
+3. Give it a name (e.g., "Android Web Client")
+4. Add `http://localhost` to authorized redirect URIs
+5. Click "Create" and copy the Client ID and Client Secret
 
 ## Step 2: Configure Your Android App
 
@@ -74,9 +72,9 @@ The plugin automatically adds the required permissions. Your main app's `Android
 If you're using ProGuard/R8 for release builds, add these rules to your `proguard-rules.pro`:
 
 ```proguard
-# Credential Manager
--keep class androidx.credentials.** { *; }
--keep class com.google.android.libraries.identity.** { *; }
+# Google Sign-In
+-keep class com.google.android.gms.auth.** { *; }
+-keep class com.google.android.gms.common.** { *; }
 
 # Kotlin Coroutines
 -keepattributes Signature
@@ -101,29 +99,24 @@ import {
   signIn, 
   signOut, 
   refreshToken 
-} from 'tauri-plugin-google-auth';
+} from '@choochmeque/tauri-plugin-google-auth-api';
 
 // Sign in with Google
 async function handleSignIn() {
   try {
     const tokens = await signIn({
-      // IMPORTANT: Use the Web Client ID for Credential Manager
-      clientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
-      scopes: ['email', 'profile'], // Note: Additional scopes not directly supported by Credential Manager
+      clientId: 'YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com',
+      clientSecret: 'YOUR_CLIENT_SECRET', // Optional, may be needed for certain flows
+      scopes: ['email', 'profile'], // OAuth scopes to request
       hostedDomain: 'example.com', // Optional: restrict to specific domain
-      loginHint: 'user@example.com' // Optional: pre-fill email (not supported in new API)
+      loginHint: 'user@example.com' // Optional: pre-fill email
     });
     
     console.log('Sign-in successful:', tokens);
     console.log('ID Token:', tokens.idToken);
     console.log('Access Token:', tokens.accessToken);
     console.log('Refresh Token:', tokens.refreshToken);
-    console.log('Expires At:', tokens.expiresAt);
-    
-    // Note about tokens with Credential Manager:
-    // - idToken: Available and contains user information
-    // - accessToken: Not provided by Credential Manager API
-    // - refreshToken: Not available with Credential Manager
+    console.log('Expires At:', tokens.expiresAt); // Unix timestamp in milliseconds
     
   } catch (error) {
     console.error('Sign in failed:', error);
@@ -131,8 +124,8 @@ async function handleSignIn() {
     // Handle specific error cases
     if (error.includes('cancelled')) {
       console.log('User cancelled sign-in');
-    } else if (error.includes('No credentials')) {
-      console.log('No saved credentials found');
+    } else if (error.includes('network')) {
+      console.log('Network error occurred');
     }
   }
 }
@@ -140,10 +133,10 @@ async function handleSignIn() {
 // Sign out
 async function handleSignOut() {
   try {
-    await signOut();
+    await signOut({
+      accessToken: 'USER_ACCESS_TOKEN' // Optional: revoke token with Google
+    });
     console.log('User signed out');
-    // Note: Credential Manager manages credentials at system level
-    // Sign out clears app's current user state
   } catch (error) {
     console.error('Sign out failed:', error);
   }
@@ -156,7 +149,6 @@ async function refreshUserToken() {
     console.log('Refreshed tokens:', tokens);
     console.log('New ID Token:', tokens.idToken);
     console.log('New Access Token:', tokens.accessToken);
-    // Gets fresh tokens from saved credentials
   } catch (error) {
     console.error('Token refresh failed:', error);
   }
@@ -176,46 +168,57 @@ async function refreshUserToken() {
    ```
 
 3. Test the sign-in flow:
-   - The Credential Manager will present a bottom sheet with available Google accounts
-   - Users can select an account or add a new one
-   - The authentication happens through Google Play Services
+   - The plugin will open a web view for Google authentication
+   - Users can sign in with their Google account
+   - The plugin will capture the authorization code and exchange it for tokens
 
-## Important Differences with Credential Manager
+## Important Implementation Details
 
-### What's Changed from the Deprecated API:
+### OAuth Flow
 
-1. **Authentication UI**: Now uses a system-managed bottom sheet instead of a separate activity
-2. **Token Management**: Credentials are managed by the Android system
-3. **No Direct Access Token**: Credential Manager doesn't provide OAuth access tokens
-4. **Automatic Credential Storage**: System automatically saves and manages credentials
-5. **Unified Experience**: Same UI for passwords, passkeys, and federated sign-in
+The Android implementation uses a traditional OAuth 2.0 authorization code flow:
 
-### Available Data:
+1. Opens a web view with Google's authorization endpoint
+2. User authenticates and grants permissions
+3. Captures the authorization code from the redirect
+4. Exchanges the code for tokens (ID token, access token, and optionally refresh token)
 
-With Credential Manager, you get:
-- **ID Token**: JWT containing user information (always available)
-- **User Profile**: Email, name, profile picture
-- **User ID**: Unique identifier
+### Available Tokens
 
-Not directly available:
-- **Access Token**: Use ID token for authentication
-- **Refresh Token**: Use `restorePreviousSignIn()` or `refreshToken()` for fresh credentials
+The plugin provides:
+- **ID Token**: JWT containing user information
+- **Access Token**: OAuth token for accessing Google APIs
+- **Refresh Token**: Token for obtaining new access tokens (when offline scope is requested)
+- **Expiration Time**: Unix timestamp in milliseconds indicating when the access token expires
+
+### Supported Parameters
+
+All standard OAuth parameters are supported:
+- `clientId`: Required - Your Android OAuth client ID
+- `clientSecret`: Optional - May be required for certain flows
+- `scopes`: OAuth scopes to request (email and profile are common)
+- `hostedDomain`: Restrict authentication to a specific Google Workspace domain
+- `loginHint`: Pre-fill the email field in the sign-in form
 
 ## Security Best Practices
 
 1. **Client ID Security**: 
    - Use environment variables or build configuration for Client ID
-   - Never hardcode sensitive information
+   - Never hardcode sensitive information in your source code
 
-2. **ID Token Validation**:
-   - Always validate ID tokens on your backend
-   - Verify the token signature and claims
+2. **Token Validation**:
+   - Always validate ID tokens on your backend server
+   - Verify the token signature and claims before trusting the user identity
 
-3. **Nonce Usage**:
-   - The plugin automatically generates a nonce for enhanced security
-   - This prevents replay attacks
+3. **Secure Storage**:
+   - The plugin stores tokens securely using Android's SharedPreferences with encryption
+   - Clear tokens when user signs out
 
-4. **Session Management**:
+4. **HTTPS Only**:
+   - All OAuth communications use HTTPS
+   - Ensure your redirect URIs use secure protocols
+
+5. **Session Management**:
    - Implement proper session timeout
    - Clear sensitive data when user signs out
 
@@ -223,46 +226,36 @@ Not directly available:
 
 ### Common Issues
 
-1. **"No credentials available"**:
-   - User has no Google account on device
-   - Google Play Services not available or outdated
-   - Check SHA-1 fingerprint matches in Google Cloud Console
+1. **"Configuration error" on sign-in**:
+   - Check that your SHA-1 fingerprint is added to Google Cloud Console
+   - Ensure your package name matches exactly with the one in Google Cloud Console
+   - Verify the client ID is correct
 
 2. **Sign-in fails silently**:
-   - Verify you're using the Web Client ID (not Android Client ID)
-   - Check package name matches exactly
-   - Ensure SHA-1 fingerprint is correct for your build type
+   - Check that internet permissions are granted
+   - Verify Google Play Services is available on the device
+   - Check logcat for detailed error messages
 
 3. **"User cancelled the sign-in flow"**:
-   - User dismissed the credential picker
-   - This is normal user behavior, handle gracefully
+   - User closed the authentication web view
+   - This is normal user behavior, handle gracefully in your app
 
-4. **Credential Manager not working on older devices**:
-   - Requires Google Play Services with Credential Manager support
-   - Falls back to no credentials on unsupported devices
+4. **Token refresh fails**:
+   - Ensure offline access scope was requested during initial sign-in
+   - Check that refresh token is being stored properly
+   - Verify client secret is provided if required
 
 ## Testing on Emulator
 
 To test on an Android emulator:
 1. Use an emulator with Google Play Services (API 21+)
-2. Sign in to a Google account on the emulator
-3. Ensure the emulator has internet connectivity
-4. Google Play Services should be up to date
-
-## Migration from Deprecated GoogleSignIn
-
-If you're migrating from the old GoogleSignIn API:
-
-1. **Update Dependencies**: Replace `play-services-auth` with Credential Manager libraries
-2. **Change Sign-In Flow**: Replace GoogleSignInClient with CredentialManager
-3. **Update Token Handling**: Adapt to ID token-only authentication
-4. **Modify Error Handling**: Update for new exception types
-5. **Test Thoroughly**: The UX is different with the bottom sheet
+2. Ensure the emulator has internet connectivity
+3. The SHA-1 fingerprint for debug builds should work on the emulator
 
 ## Additional Resources
 
-- [Credential Manager Documentation](https://developer.android.com/identity/sign-in/credential-manager)
-- [Google Identity Services](https://developers.google.com/identity)
-- [Migrate from Google Sign-In](https://developer.android.com/identity/sign-in/credential-manager-migration)
+- [Google Sign-In for Android](https://developers.google.com/identity/sign-in/android)
+- [OAuth 2.0 for Mobile Apps](https://developers.google.com/identity/protocols/oauth2/native-app)
+- [Google OAuth 2.0 Scopes](https://developers.google.com/identity/protocols/oauth2/scopes)
 - [ID Token Verification](https://developers.google.com/identity/sign-in/android/backend-auth)
 - [Tauri Mobile Documentation](https://tauri.app/v1/guides/building/mobile)

@@ -49,6 +49,7 @@ class GoogleSignInPlugin: Plugin {
                             "idToken": signInResult.openIdToken,
                             "accessToken": signInResult.accessToken.tokenString,
                             "refreshToken": signInResult.refreshToken ?? "",
+                            "scopes": signInResult.grantedScopes ?? []
                         ]
 
                          if let expirationDate = signInResult.accessToken.expirationDate {
@@ -86,6 +87,7 @@ class GoogleSignInPlugin: Plugin {
                          "idToken": signInResult.openIdToken,
                          "accessToken": signInResult.accessToken.tokenString,
                          "refreshToken": signInResult.refreshToken ?? "",
+                         "scopes": signInResult.grantedScopes ?? []
                      ]
 
                       if let expirationDate = signInResult.accessToken.expirationDate {

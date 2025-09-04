@@ -24,6 +24,8 @@ class GoogleSignInActivity : AppCompatActivity() {
     private lateinit var authorizationClient: AuthorizationClient
     private lateinit var authorizationLauncher: ActivityResultLauncher<IntentSenderRequest>
     private var clientId: String? = null
+    private var clientSecret: String? = null
+    private var redirectUri: String? = null
     private lateinit var scopes: Array<String>
     
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -31,6 +33,8 @@ class GoogleSignInActivity : AppCompatActivity() {
         setContentView(R.layout.activity_google_sign_in)
         
         clientId = intent.getStringExtra(GoogleSignInPlugin.CLIENT_ID)
+        clientSecret = intent.getStringExtra(GoogleSignInPlugin.CLIENT_SECRET)
+        redirectUri = intent.getStringExtra(GoogleSignInPlugin.REDIRECT_URI)
         scopes = intent.getStringArrayExtra(GoogleSignInPlugin.SCOPES) ?: emptyArray()
 
         if (clientId == null) {
@@ -87,9 +91,12 @@ class GoogleSignInActivity : AppCompatActivity() {
                 } else {
                     val serverAuthCode = authorizationResult.serverAuthCode
                     val accessToken = authorizationResult.accessToken
+                    val grantedScopes = authorizationResult.grantedScopes
                     
                     if (serverAuthCode != null) {
-                        finishWithSuccess(serverAuthCode)
+                        // Convert Set<Scope> to Array<String>
+                        val scopeStrings = grantedScopes?.map { scope -> scope.toString() }?.toTypedArray() ?: emptyArray()
+                        finishWithSuccess(serverAuthCode, scopeStrings)
                     } else if (accessToken != null) {
                         finishWithError("Authorization flow did not return auth code")
                     } else {
@@ -150,7 +157,9 @@ class GoogleSignInActivity : AppCompatActivity() {
                 val grantedScopes = authorizationResult.grantedScopes
                 
                 if (serverAuthCode != null) {
-                    finishWithSuccess(serverAuthCode)
+                    // Convert Set<Scope> to Array<String>
+                    val scopeStrings = grantedScopes?.map { scope -> scope.toString() }?.toTypedArray() ?: emptyArray()
+                    finishWithSuccess(serverAuthCode, scopeStrings)
                 } else if (accessToken != null) {
                     finishWithError("Authorization flow did not return auth code. Ensure offline access is requested.")
                 } else {
@@ -171,10 +180,14 @@ class GoogleSignInActivity : AppCompatActivity() {
         }
     }
     
-    private fun finishWithSuccess(authCode: String) {
+    private fun finishWithSuccess(authCode: String, grantedScopes: Array<String> = emptyArray()) {
         val intent = Intent().apply {
             val prefix = GoogleSignInPlugin.RESULT_EXTRA_PREFIX
             putExtra(prefix + GoogleSignInPlugin.AUTH_CODE, authCode)
+            putExtra(prefix + GoogleSignInPlugin.CLIENT_ID, clientId)
+            putExtra(prefix + GoogleSignInPlugin.CLIENT_SECRET, clientSecret)
+            putExtra(prefix + GoogleSignInPlugin.REDIRECT_URI, redirectUri)
+            putExtra(prefix + GoogleSignInPlugin.GRANTED_SCOPES, grantedScopes)
         }
         setResult(Activity.RESULT_OK, intent)
         finish()

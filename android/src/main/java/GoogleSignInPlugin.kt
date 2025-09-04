@@ -3,17 +3,15 @@ package app.tauri.googleauth
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
 import android.util.Log
 import android.webkit.WebView
 import androidx.activity.result.ActivityResult
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import app.tauri.annotation.ActivityCallback
 import app.tauri.annotation.Command
 import app.tauri.annotation.InvokeArg
 import app.tauri.annotation.TauriPlugin
 import app.tauri.plugin.Invoke
+import app.tauri.plugin.JSArray
 import app.tauri.plugin.JSObject
 import app.tauri.plugin.Plugin
 import com.google.android.gms.auth.api.identity.AuthorizationClient
@@ -42,6 +40,17 @@ class SignInArgs {
     var redirectUri: String? = ""
 }
 
+@InvokeArg
+class SignOutArgs {
+    var accessToken: String? = null
+}
+
+@InvokeArg
+class RefreshTokenArgs {
+    lateinit var refreshToken: String
+    lateinit var clientId: String
+    var clientSecret: String? = null
+}
 
 @TauriPlugin
 class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
@@ -49,14 +58,6 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
     companion object {
         private const val TAG = "GoogleSignInPlugin"
         
-        private const val PREFS_NAME = "google_auth_prefs"
-        private const val KEY_ACCESS_TOKEN = "access_token"
-        private const val KEY_REFRESH_TOKEN = "refresh_token"
-        private const val KEY_ID_TOKEN = "id_token"
-        private const val KEY_TOKEN_EXPIRY = "token_expiry"
-        private const val KEY_CLIENT_ID = "client_id"
-        private const val KEY_CLIENT_SECRET = "client_secret"
-        private const val KEY_REDIRECT_URI = "redirect_uri"
         
         const val TITLE = "title"
         const val SUBTITLE = "subtitle"
@@ -65,6 +66,7 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
         const val SCOPES = "scopes"
         const val REDIRECT_URI = "redirectUri"
         const val AUTH_CODE = "authCode"
+        const val GRANTED_SCOPES = "grantedScopes"
         const val ERROR_MESSAGE = "errorMessage"
         
         var RESULT_EXTRA_PREFIX = ""
@@ -76,30 +78,12 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
         .readTimeout(30, TimeUnit.SECONDS)
         .build()
     private val gson = Gson()
-    private lateinit var sharedPreferences: SharedPreferences
     private lateinit var authorizationClient: AuthorizationClient
     private lateinit var signInClient: SignInClient
     
     override fun load(webView: WebView) {
         super.load(webView)
         RESULT_EXTRA_PREFIX = activity.packageName + "."
-        
-        try {
-            val masterKey = MasterKey.Builder(activity)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
-                
-            sharedPreferences = EncryptedSharedPreferences.create(
-                activity,
-                PREFS_NAME,
-                masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-            )
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to initialize encrypted preferences, using regular preferences", e)
-            sharedPreferences = activity.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        }
         
         authorizationClient = Identity.getAuthorizationClient(activity)
         signInClient = Identity.getSignInClient(activity)
@@ -114,8 +98,6 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
                 invoke.reject("Client ID is required")
                 return
             }
-            
-            saveCredentials(args.clientId, args.clientSecret, args.redirectUri)
             
             val intent = Intent(activity, GoogleSignInActivity::class.java).apply {
                 putExtra(CLIENT_ID, args.clientId)
@@ -162,17 +144,18 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
             return
         }
         
+        val clientId = data?.getStringExtra(RESULT_EXTRA_PREFIX + CLIENT_ID)
+        val clientSecret = data?.getStringExtra(RESULT_EXTRA_PREFIX + CLIENT_SECRET)
+        val redirectUri = data?.getStringExtra(RESULT_EXTRA_PREFIX + REDIRECT_URI) ?: ""
+        val grantedScopes = data?.getStringArrayExtra(RESULT_EXTRA_PREFIX + GRANTED_SCOPES)
+        
+        if (clientId == null) {
+            invoke.reject("Client ID not found")
+            return
+        }
+        
         scope.launch {
             try {
-                val clientId = sharedPreferences.getString(KEY_CLIENT_ID, null)
-                val clientSecret = sharedPreferences.getString(KEY_CLIENT_SECRET, null)
-                val redirectUri = sharedPreferences.getString(KEY_REDIRECT_URI, null) ?: ""
-                
-                if (clientId == null) {
-                    invoke.reject("Client ID not found")
-                    return@launch
-                }
-                
                 val tokenResponse = exchangeAuthCodeForTokens(
                     authCode,
                     clientId,
@@ -180,9 +163,7 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
                     redirectUri
                 )
                 
-                saveTokens(tokenResponse)
-                
-                val tokenObject = createTokenResponse(tokenResponse)
+                val tokenObject = createTokenResponse(tokenResponse, grantedScopes?.toList())
                 invoke.resolve(tokenObject)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to exchange auth code", e)
@@ -195,10 +176,10 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
     fun signOut(invoke: Invoke) {
         scope.launch {
             try {
-                // Get the stored access token if available
-                val accessToken = sharedPreferences.getString(KEY_ACCESS_TOKEN, null)
-                
+                val args = invoke.parseArgs(SignOutArgs::class.java)
+
                 // Revoke the access token with Google's servers if it exists
+                val accessToken = args.accessToken
                 if (accessToken != null) {
                     try {
                         revokeAccessToken(accessToken)
@@ -219,9 +200,6 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
                     Log.w(TAG, "Failed to sign out from Google Sign-In client: ${e.message}")
                 }
                 
-                // Clear all locally stored authentication data
-                clearStoredData()
-                
                 val ret = JSObject()
                 ret.put("success", true)
                 invoke.resolve(ret)
@@ -236,17 +214,9 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
     fun refreshToken(invoke: Invoke) {
         scope.launch {
             try {
-                val refreshToken = sharedPreferences.getString(KEY_REFRESH_TOKEN, null)
-                val clientId = sharedPreferences.getString(KEY_CLIENT_ID, null)
-                val clientSecret = sharedPreferences.getString(KEY_CLIENT_SECRET, null)
-                
-                if (refreshToken == null || clientId == null) {
-                    invoke.reject("No refresh token available")
-                    return@launch
-                }
-                
-                val tokenResponse = refreshAccessToken(refreshToken, clientId, clientSecret)
-                saveTokens(tokenResponse)
+                val args = invoke.parseArgs(RefreshTokenArgs::class.java)
+
+                val tokenResponse = refreshAccessToken(args.refreshToken, args.clientId, args.clientSecret)
                 
                 val tokenObject = createTokenResponse(tokenResponse)
                 invoke.resolve(tokenObject)
@@ -346,35 +316,7 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
         }
     }
     
-    private fun saveTokens(tokenResponse: Map<String, Any?>) {
-        val expiresIn = (tokenResponse["expires_in"] as? Number)?.toLong() ?: 3600
-        val expiryTime = System.currentTimeMillis() + (expiresIn * 1000)
-        
-        sharedPreferences.edit().apply {
-            (tokenResponse["access_token"] as? String)?.let { putString(KEY_ACCESS_TOKEN, it) }
-            (tokenResponse["refresh_token"] as? String)?.let { putString(KEY_REFRESH_TOKEN, it) }
-            (tokenResponse["id_token"] as? String)?.let { putString(KEY_ID_TOKEN, it) }
-            putLong(KEY_TOKEN_EXPIRY, expiryTime)
-            apply()
-        }
-    }
-    
-    
-    private fun saveCredentials(clientId: String, clientSecret: String?, redirectUri: String?) {
-        sharedPreferences.edit().apply {
-            putString(KEY_CLIENT_ID, clientId)
-            clientSecret?.let { putString(KEY_CLIENT_SECRET, it) }
-            redirectUri?.let { putString(KEY_REDIRECT_URI, it) }
-            apply()
-        }
-    }
-    
-    
-    private fun clearStoredData() {
-        sharedPreferences.edit().clear().apply()
-    }
-    
-    private fun createTokenResponse(tokenResponse: Map<String, Any?>): JSObject {
+    private fun createTokenResponse(tokenResponse: Map<String, Any?>, grantedScopes: List<String>? = null): JSObject {
         val expiresIn = (tokenResponse["expires_in"] as? Number)?.toLong() ?: 3600
         val expiresAt = System.currentTimeMillis() + (expiresIn * 1000)
         
@@ -383,6 +325,12 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
             put("accessToken", tokenResponse["access_token"] as? String ?: "")
             put("refreshToken", tokenResponse["refresh_token"] as? String ?: "")
             put("expiresAt", expiresAt)
+            
+            // Include granted scopes if available, otherwise try to parse from the token response
+            val scopes = grantedScopes ?: (tokenResponse["scope"] as? String)?.split(" ") ?: emptyList()
+            put("scopes", JSArray().apply {
+                scopes.forEach { put(it) }
+            })
         }
     }
 }

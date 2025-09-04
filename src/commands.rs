@@ -8,7 +8,7 @@ use crate::Result;
 pub(crate) async fn sign_in<R: Runtime>(
     app: AppHandle<R>,
     payload: SignInRequest,
-) -> Result<SignInResponse> {
+) -> Result<crate::TokenResponse> {
     app.google_auth().sign_in(payload)
 }
 
@@ -24,6 +24,6 @@ pub(crate) async fn sign_out<R: Runtime>(
 pub(crate) async fn refresh_token<R: Runtime>(
     app: AppHandle<R>,
     payload: RefreshTokenRequest,
-) -> Result<RefreshTokenResponse> {
+) -> Result<TokenResponse> {
     app.google_auth().refresh_token(payload)
 }
