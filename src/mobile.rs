@@ -37,10 +37,7 @@ impl<R: Runtime> GoogleAuth<R> {
             .map_err(Into::into)
     }
 
-    pub fn refresh_token(
-        &self,
-        payload: RefreshTokenRequest,
-    ) -> crate::Result<TokenResponse> {
+    pub fn refresh_token(&self, payload: RefreshTokenRequest) -> crate::Result<TokenResponse> {
         self.0
             .run_mobile_plugin("refreshToken", payload)
             .map_err(Into::into)

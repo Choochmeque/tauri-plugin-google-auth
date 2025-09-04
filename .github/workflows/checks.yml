@@ -19,7 +19,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          cache: "pnpm"
           node-version: "20"
       - run: npm install -g pnpm
       - run: pnpm install
@@ -42,7 +41,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo install cargo-deadlinks
-      - run: cargo doc --no-deps -p os_info
+      - run: cargo doc --no-deps -p tauri-plugin-google-auth
       - run: cargo deadlinks --no-build
 
   # Check links in markdown files.
