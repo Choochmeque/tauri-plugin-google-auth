@@ -38,3 +38,7 @@ allow = [
     "Unicode-3.0",
     "Zlib",
 ]
+exceptions = [
+    # Use exceptions for these as they only have a single user
+    { allow = ["CDLA-Permissive-2.0"], crate = "webpki-roots" },
+]
