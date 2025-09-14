@@ -136,6 +136,7 @@ async function authenticateUser() {
       loginHint: 'user@example.com', // Optional: pre-fill email
       redirectUri: 'http://localhost:8080', // Optional: specify custom redirect URI
       successHtmlResponse: '<h1>Success!</h1>' // Optional: custom success message (desktop)
+    })
     
     console.log('ID Token:', response.idToken);
     console.log('Access Token:', response.accessToken);
