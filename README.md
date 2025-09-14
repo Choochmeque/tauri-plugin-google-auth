@@ -268,7 +268,7 @@ try {
 
 | Platform | Status | Implementation |
 |----------|--------|---------------|
-| iOS      | ✅ Supported | Native Google Sign-In SDK |
+| iOS      | ✅ Supported | Native Google Sign-In SDK via [SimpleGoogleSignIn](https://github.com/Choochmeque/SimpleGoogleSignIn) |
 | Android  | ✅ Supported | Credential Manager API |
 | macOS    | ✅ Supported | OAuth2 with local redirect server |
 | Windows  | ✅ Supported | OAuth2 with local redirect server |
