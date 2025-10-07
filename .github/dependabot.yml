@@ -19,7 +19,7 @@ updates:
 
   # Enable version updates for Gradle
   - package-ecosystem: "gradle"
-    directory: "/src-tauri/gen/android/"
+    directory: "/android/"
     schedule:
       interval: "weekly"
 
