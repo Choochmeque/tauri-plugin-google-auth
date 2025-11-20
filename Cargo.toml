@@ -1,6 +1,6 @@
 [package]
 name = "tauri-plugin-google-auth"
-version = "0.3.3"
+version = "0.3.4"
 authors = ["You"]
 description = "A Tauri v2 plugin that enables Google OAuth authentication"
 edition = "2021"
