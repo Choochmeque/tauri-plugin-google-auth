@@ -46,7 +46,7 @@ dependencies {
     implementation("com.google.android.gms:play-services-auth:21.4.0")
     
     // Secure storage
-    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    implementation("androidx.security:security-crypto:1.1.0")
     
     // HTTP client for token exchange
     implementation("com.squareup.okhttp3:okhttp:5.2.1")
