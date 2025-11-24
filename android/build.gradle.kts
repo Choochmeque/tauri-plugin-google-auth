@@ -49,7 +49,7 @@ dependencies {
     implementation("androidx.security:security-crypto:1.1.0")
     
     // HTTP client for token exchange
-    implementation("com.squareup.okhttp3:okhttp:5.2.1")
+    implementation("com.squareup.okhttp3:okhttp:5.3.2")
     
     // JSON parsing
     implementation("com.google.code.gson:gson:2.13.2")
