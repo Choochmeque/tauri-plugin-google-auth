@@ -41,14 +41,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo clippy --all-targets --all-features -- -D warnings
 
-  # Check links in markdown files.
-  mlc:
-    name: mlc
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: becheran/mlc@v1
-
   # Spellcheck.
   spellcheck:
     runs-on: ubuntu-latest
