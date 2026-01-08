@@ -116,7 +116,7 @@ async function handleSignIn() {
     console.log('ID Token:', tokens.idToken);
     console.log('Access Token:', tokens.accessToken);
     console.log('Refresh Token:', tokens.refreshToken);
-    console.log('Expires At:', tokens.expiresAt); // Unix timestamp in milliseconds
+    console.log('Expires At:', tokens.expiresAt); // Unix timestamp in seconds
     
   } catch (error) {
     console.error('Sign in failed:', error);
@@ -143,11 +143,13 @@ async function handleSignOut() {
 }
 
 // Refresh credentials
-async function refreshUserToken() {
+async function refreshUserToken(storedRefreshToken: string) {
   try {
-    const tokens = await refreshToken();
+    const tokens = await refreshToken({
+      refreshToken: storedRefreshToken,
+      clientId: 'YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com'
+    });
     console.log('Refreshed tokens:', tokens);
-    console.log('New ID Token:', tokens.idToken);
     console.log('New Access Token:', tokens.accessToken);
   } catch (error) {
     console.error('Token refresh failed:', error);
@@ -189,7 +191,7 @@ The plugin provides:
 - **ID Token**: JWT containing user information
 - **Access Token**: OAuth token for accessing Google APIs
 - **Refresh Token**: Token for obtaining new access tokens (when offline scope is requested)
-- **Expiration Time**: Unix timestamp in milliseconds indicating when the access token expires
+- **Expiration Time**: Unix timestamp in seconds indicating when the access token expires
 
 ### Supported Parameters
 

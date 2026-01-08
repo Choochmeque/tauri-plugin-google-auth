@@ -106,11 +106,13 @@ async function handleSignOut() {
 }
 
 // Refresh access token
-async function refreshUserToken() {
+async function refreshUserToken(storedRefreshToken: string) {
   try {
-    const tokens = await refreshToken();
+    const tokens = await refreshToken({
+      refreshToken: storedRefreshToken,
+      clientId: 'YOUR_IOS_CLIENT_ID.apps.googleusercontent.com'
+    });
     console.log('Refreshed tokens:', tokens);
-    console.log('New ID Token:', tokens.idToken);
     console.log('New Access Token:', tokens.accessToken);
   } catch (error) {
     console.error('Token refresh failed:', error);
@@ -154,7 +156,7 @@ const user = await signIn({
 - **Access Token**: Used to access Google APIs
 - **Refresh Token**: Used to obtain new access tokens (may not always be available on iOS)
 
-The `expiresAt` field indicates when the access token expires (Unix timestamp in milliseconds).
+The `expiresAt` field indicates when the access token expires (Unix timestamp in seconds).
 
 ### Error Handling
 

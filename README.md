@@ -8,13 +8,13 @@ A Tauri v2 plugin for Google OAuth authentication, providing seamless Google Sig
 
 ## Features
 
-- 🔐 **Secure OAuth 2.0 Authentication** - Full OAuth 2.0 implementation with PKCE support
-- 📱 **Mobile Support** - Native iOS and Android implementations using platform-specific APIs
-- 🖥️ **Desktop Support** - OAuth2 flow with local redirect server for macOS, Windows, and Linux
-- 🔄 **Token Management** - Token refresh and revocation support
-- 🎯 **TypeScript Support** - Fully typed API with comprehensive JSDoc documentation
-- 🛡️ **Security First** - PKCE, secure redirect handling, and proper error management
-- ⚙️ **Flexible Configuration** - Customizable redirect URIs, HTML responses, and dynamic port binding
+- **Secure OAuth 2.0 Authentication** - Full OAuth 2.0 implementation with PKCE support
+- **Mobile Support** - Native iOS and Android implementations using platform-specific APIs
+- **Desktop Support** - OAuth2 flow with local redirect server for macOS, Windows, and Linux
+- **Token Management** - Token refresh and revocation support
+- **TypeScript Support** - Fully typed API with comprehensive JSDoc documentation
+- **Security First** - PKCE, secure redirect handling, and proper error management
+- **Flexible Configuration** - Customizable redirect URIs, HTML responses, and dynamic port binding
 
 ## Installation
 
@@ -141,7 +141,7 @@ async function authenticateUser() {
     console.log('ID Token:', response.idToken);
     console.log('Access Token:', response.accessToken);
     console.log('Refresh Token:', response.refreshToken);
-    console.log('Expires at:', new Date(response.expiresAt));
+    console.log('Expires at:', new Date(response.expiresAt * 1000));
   } catch (error) {
     console.error('Authentication failed:', error);
   }
@@ -161,9 +161,13 @@ async function logout(accessToken?: string) {
 }
 
 // Refresh tokens
-async function refreshUserToken() {
+async function refreshUserToken(storedRefreshToken: string) {
   try {
-    const response = await refreshToken();
+    const response = await refreshToken({
+      refreshToken: storedRefreshToken,
+      clientId: 'YOUR_GOOGLE_CLIENT_ID',
+      clientSecret: 'YOUR_CLIENT_SECRET' // Required for desktop
+    });
     console.log('New Access Token:', response.accessToken);
   } catch (error) {
     console.error('Token refresh failed:', error);
@@ -178,7 +182,7 @@ import { signIn } from '@choochmeque/tauri-plugin-google-auth-api';
 
 const response = await signIn({
   clientId: 'YOUR_CLIENT_ID',
-  clientSecret: 'YOUR_CLIENT_SECRET', // Optional: for certain OAuth flows
+  clientSecret: 'YOUR_CLIENT_SECRET', // Required for desktop
   scopes: [
     'openid',
     'email',
@@ -187,7 +191,7 @@ const response = await signIn({
   ],
   hostedDomain: 'company.com', // Restrict to company domain
   loginHint: 'john.doe@company.com', // Pre-fill the email field
-  redirectUri: 'custom://redirect' // Custom redirect URI
+  redirectUri: 'http://localhost:9000' // Custom port (desktop only)
 });
 ```
 
@@ -201,11 +205,11 @@ const response = await signIn({
 interface SignInOptions {
   clientId: string;              // Required: Google OAuth client ID
   clientSecret?: string;         // Required for desktop platforms
-  scopes?: string[];            // OAuth scopes to request (openid added automatically)
-  hostedDomain?: string;        // Restrict authentication to a specific domain
-  loginHint?: string;           // Email hint to pre-fill in the sign-in form
-  redirectUri?: string;         // Custom redirect URI (desktop: defaults to random port)
-  successHtmlResponse?: string; // Custom HTML shown after auth (desktop only)
+  scopes?: string[];             // OAuth scopes to request
+  hostedDomain?: string;         // Restrict authentication to a specific domain
+  loginHint?: string;            // Email hint to pre-fill in the sign-in form
+  redirectUri?: string;          // Custom redirect URI (desktop: localhost only)
+  successHtmlResponse?: string;  // Custom HTML shown after auth (desktop only)
 }
 ```
 
@@ -213,10 +217,11 @@ interface SignInOptions {
 
 ```typescript
 interface TokenResponse {
-  idToken: string;           // JWT ID token (UUID v7 placeholder on desktop currently)
+  idToken?: string;          // JWT ID token (requires 'openid' scope)
   accessToken: string;       // OAuth access token for API calls
+  scopes: string[];          // List of scopes granted with the access token
   refreshToken?: string;     // Refresh token (when offline access is granted)
-  expiresAt?: number;       // Token expiration timestamp (seconds since epoch)
+  expiresAt?: number;        // Token expiration timestamp (seconds since epoch)
 }
 ```
 
@@ -234,33 +239,24 @@ interface SignOutOptions {
 }
 ```
 
-#### `refreshToken(): Promise<TokenResponse>`
-Refreshes the current access token using the stored refresh token.
+#### `refreshToken(options: RefreshTokenOptions): Promise<TokenResponse>`
+Refreshes the access token using a refresh token.
+
+```typescript
+interface RefreshTokenOptions {
+  refreshToken: string;    // Refresh token obtained from initial sign-in
+  clientId: string;        // Google OAuth client ID
+  clientSecret?: string;   // Client secret (required for desktop)
+}
+```
 
 ## Error Handling
 
-The plugin provides detailed error information for common scenarios:
-
 ```typescript
 try {
-  await signIn({ clientId: 'YOUR_CLIENT_ID' });
+  await signIn({ clientId: 'YOUR_CLIENT_ID', scopes: ['openid'] });
 } catch (error) {
-  switch (error.code) {
-    case 'USER_CANCELLED':
-      console.log('User cancelled the sign-in flow');
-      break;
-    case 'NETWORK_ERROR':
-      console.log('Network error occurred');
-      break;
-    case 'INVALID_CLIENT_ID':
-      console.log('Invalid client ID provided');
-      break;
-    case 'CONFIGURATION_ERROR':
-      console.log('Plugin not properly configured');
-      break;
-    default:
-      console.error('Unknown error:', error);
-  }
+  console.error('Sign-in failed:', error);
 }
 ```
 
@@ -268,11 +264,11 @@ try {
 
 | Platform | Status | Implementation |
 |----------|--------|---------------|
-| iOS      | ✅ Supported | Native Google Sign-In SDK via [SimpleGoogleSignIn](https://github.com/Choochmeque/SimpleGoogleSignIn) |
-| Android  | ✅ Supported | Credential Manager API |
-| macOS    | ✅ Supported | OAuth2 with local redirect server |
-| Windows  | ✅ Supported | OAuth2 with local redirect server |
-| Linux    | ✅ Supported | OAuth2 with local redirect server |
+| iOS      | Supported | Native Google Sign-In SDK via [SimpleGoogleSignIn](https://github.com/Choochmeque/SimpleGoogleSignIn) |
+| Android  | Supported | Credential Manager API |
+| macOS    | Supported | OAuth2 with local redirect server |
+| Windows  | Supported | OAuth2 with local redirect server |
+| Linux    | Supported | OAuth2 with local redirect server |
 
 ## Security Considerations
 
@@ -285,7 +281,6 @@ try {
 - **SSRF Protection**: HTTP client configured to prevent redirect vulnerabilities
 - **Dynamic Port Binding**: Desktop platforms use random available ports by default
 - **Token Revocation**: Supports proper token revocation with Google's revocation endpoint
-- **Permission System**: Fine-grained permissions control access to authentication methods
 
 ## Troubleshooting
 
@@ -301,9 +296,9 @@ try {
 - Verify internet permissions are granted
 
 #### Desktop: Token refresh fails
-- Note: Token refresh is not yet implemented for desktop platforms
-- Store the refresh token from initial sign-in and implement your own refresh logic
-- Ensure offline access scope is requested during initial sign-in
+- Ensure you pass `clientId` and `clientSecret` to `refreshToken()`
+- Verify the refresh token is valid and not expired
+- Ensure offline access scope was requested during initial sign-in
 
 #### Token refresh fails (Mobile)
 - Ensure offline access scope is requested during initial sign-in
