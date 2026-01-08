@@ -12,7 +12,6 @@ A Tauri v2 plugin for Google OAuth authentication, providing seamless Google Sig
 - **Mobile Support** - Native iOS and Android implementations using platform-specific APIs
 - **Desktop Support** - OAuth2 flow with local redirect server for macOS, Windows, and Linux
 - **Token Management** - Token refresh and revocation support
-- **TypeScript Support** - Fully typed API with comprehensive JSDoc documentation
 - **Security First** - PKCE, secure redirect handling, and proper error management
 - **Flexible Configuration** - Customizable redirect URIs, HTML responses, and dynamic port binding
 
