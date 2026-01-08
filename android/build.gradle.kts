@@ -50,7 +50,7 @@ dependencies {
     
     // HTTP client for token exchange
     // PINNED: okhttp 4.12.0 (Kotlin 1.9 compatible) - DO NOT upgrade to 5.x until Tauri uses Kotlin 2.x
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:okhttp:5.3.2")
     
     // JSON parsing
     implementation("com.google.code.gson:gson:2.13.2")
