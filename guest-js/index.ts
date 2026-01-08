@@ -92,24 +92,42 @@ export async function signOut(options?: SignOutOptions): Promise<void> {
 }
 
 /**
+ * Options for refreshing an access token
+ */
+export interface RefreshTokenOptions {
+  /** Refresh token obtained from the initial sign-in */
+  refreshToken: string;
+  /** Google OAuth2 client ID from Google Cloud Console */
+  clientId: string;
+  /** Google OAuth2 client secret (required for desktop platforms) */
+  clientSecret?: string;
+}
+
+/**
  * Refreshes the access token using a refresh token
  *
+ * @param options - Configuration for token refresh
  * @returns Promise that resolves with new authentication tokens
  *
  * @example
  * ```typescript
- * const newTokens = await refreshToken()
+ * const newTokens = await refreshToken({
+ *   refreshToken: 'stored-refresh-token',
+ *   clientId: 'your-client-id',
+ *   clientSecret: 'your-client-secret' // Required on desktop
+ * })
  * console.log('New access token:', newTokens.accessToken)
  * ```
  *
  * @throws {Error} If refresh token is invalid or expired
- * @note Not yet implemented for desktop platforms
  */
-export async function refreshToken(): Promise<TokenResponse> {
+export async function refreshToken(
+  options: RefreshTokenOptions,
+): Promise<TokenResponse> {
   const response = await invoke<TokenResponse>(
     "plugin:google-auth|refresh_token",
     {
-      payload: {},
+      payload: options,
     },
   );
   return response;
