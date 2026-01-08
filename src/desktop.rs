@@ -168,8 +168,8 @@ impl<R: Runtime> GoogleAuth<R> {
             .set_pkce_challenge(pkce_code_challenge)
             .url();
 
-        // Open the authorization URL in the browser
-        open::that(authorize_url.to_string())
+        // Open the authorization URL in the browser (detached to avoid blocking on some Linux systems)
+        open::that_detached(authorize_url.to_string())
             .map_err(|e| crate::Error::NetworkError(format!("Failed to open browser: {e}")))?;
 
         // Get the success HTML response message (use custom if provided, otherwise default)
