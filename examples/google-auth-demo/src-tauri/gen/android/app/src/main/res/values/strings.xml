@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">google-auth-demo</string>
+    <string name="main_activity_title">google-auth-demo</string>
+</resources>

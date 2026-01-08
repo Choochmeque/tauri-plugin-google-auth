@@ -304,6 +304,16 @@ try {
 - Check that refresh token is being stored properly
 - Verify client secret is provided if required by your OAuth configuration
 
+## Demo App
+
+A demo app is available in `examples/google-auth-demo/` that showcases all plugin functionality:
+
+```bash
+cd examples/google-auth-demo
+pnpm install
+pnpm tauri dev
+```
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
