@@ -1,56 +1,75 @@
 import { invoke } from "@tauri-apps/api/core";
 
 /**
- * Response containing authentication tokens from Google OAuth2
+ * Response from Google Sign-In using Native SDK flow.
+ *
+ * Note: This flow returns ONLY idToken. Unlike the authorization code flow,
+ * accessToken and refreshToken are NOT available because we use BeginSignInRequest
+ * which returns the idToken directly from Google's native SDK.
+ *
+ * The idToken should be sent to your backend for verification and session creation.
  */
 export interface TokenResponse {
-  /** JWT ID token containing user information (requires 'openid' scope) */
-  idToken?: string;
-  /** Access token for making API requests */
-  accessToken: string;
-  /** List of scopes granted with the access token */
-  scopes: string[];
-  /** Refresh token for obtaining new access tokens (optional) */
-  refreshToken?: string;
-  /** Unix timestamp (seconds) when the access token expires */
-  expiresAt?: number;
+  /** JWT ID token containing user information, cryptographically signed by Google */
+  idToken: string;
 }
 
 /**
- * Configuration options for Google OAuth2 sign-in
+ * Configuration options for Google Sign-In.
+ *
+ * Note: clientSecret is NOT required! The Native SDK flow returns idToken directly
+ * without needing to exchange authorization codes.
  */
 export interface SignInOptions {
-  /** Google OAuth2 client ID from Google Cloud Console */
+  /**
+   * Google OAuth2 Web Client ID from Google Cloud Console.
+   * Use the "Web application" type client ID, NOT "Android" type.
+   */
   clientId: string;
-  /** Google OAuth2 client secret (required for desktop platforms) */
-  clientSecret?: string;
-  /** List of OAuth2 scopes to request (e.g., ['openid', 'email', 'profile']) */
+  /**
+   * List of OAuth2 scopes to request.
+   * Common scopes: ['email', 'profile']
+   * Note: 'openid' is implicitly included.
+   */
   scopes?: string[];
   /** Restrict sign-in to a specific G Suite domain */
   hostedDomain?: string;
   /** Pre-fill the email field in the sign-in flow */
   loginHint?: string;
-  /** Custom redirect URI (defaults to localhost with random port on desktop) */
-  redirectUri?: string;
-  /** Custom HTML message shown after successful authentication (desktop only) */
-  successHtmlResponse?: string;
 }
 
 /**
- * Initiates Google OAuth2 sign-in flow
+ * Initiates Google Sign-In using Native SDK flow (BeginSignInRequest).
+ *
+ * This flow is recommended for mobile apps because:
+ * - NO client_secret required (secure for mobile!)
+ * - Returns idToken directly from Google's native SDK
+ * - Native Google Sign-In UI (not a webview)
  *
  * @param options - Configuration for the sign-in flow
- * @returns Promise that resolves with authentication tokens
+ * @returns Promise that resolves with { idToken: string }
  *
  * @example
  * ```typescript
- * const tokens = await signIn({
- *   clientId: 'your-client-id',
- *   clientSecret: 'your-client-secret', // Required on desktop
- *   scopes: ['openid', 'email', 'profile'],
- *   successHtmlResponse: '<h1>Success!</h1><p>You can close this window.</p>'
- * })
- * console.log('Access token:', tokens.accessToken)
+ * // 1. Get idToken from native SDK
+ * const { idToken } = await signIn({
+ *   clientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+ *   scopes: ['email', 'profile']
+ * });
+ *
+ * // 2. Send idToken to your backend for verification
+ * // Example with Better Auth:
+ * await authClient.signIn.social({
+ *   provider: 'google',
+ *   idToken: { token: idToken }
+ * });
+ *
+ * // Example with custom backend:
+ * await fetch('/api/auth/google', {
+ *   method: 'POST',
+ *   headers: { 'Content-Type': 'application/json' },
+ *   body: JSON.stringify({ idToken })
+ * });
  * ```
  *
  * @throws {Error} If authentication fails or user cancels the flow
@@ -63,72 +82,21 @@ export async function signIn(options: SignInOptions): Promise<TokenResponse> {
 }
 
 /**
- * Options for signing out
- */
-export interface SignOutOptions {
-  /** Access token to revoke with Google (if not provided, performs local sign-out only) */
-  accessToken?: string;
-}
-
-/**
- * Signs out the current user
+ * Signs out the current user.
  *
- * @param options - Optional configuration for sign-out
+ * Clears the cached Google account so the user will be prompted
+ * to select an account on the next sign-in.
+ *
  * @returns Promise that resolves when sign-out is complete
  *
  * @example
  * ```typescript
- * // Revoke token with Google
- * await signOut({ accessToken: 'current-access-token' })
- *
- * // Local sign-out only (no server call)
- * await signOut()
+ * await signOut();
+ * // User will need to select account on next signIn()
  * ```
  */
-export async function signOut(options?: SignOutOptions): Promise<void> {
+export async function signOut(): Promise<void> {
   await invoke("plugin:google-auth|sign_out", {
-    payload: options || {},
+    payload: {},
   });
-}
-
-/**
- * Options for refreshing an access token
- */
-export interface RefreshTokenOptions {
-  /** Refresh token obtained from the initial sign-in */
-  refreshToken: string;
-  /** Google OAuth2 client ID from Google Cloud Console */
-  clientId: string;
-  /** Google OAuth2 client secret (required for desktop platforms) */
-  clientSecret?: string;
-}
-
-/**
- * Refreshes the access token using a refresh token
- *
- * @param options - Configuration for token refresh
- * @returns Promise that resolves with new authentication tokens
- *
- * @example
- * ```typescript
- * const newTokens = await refreshToken({
- *   refreshToken: 'stored-refresh-token',
- *   clientId: 'your-client-id',
- *   clientSecret: 'your-client-secret' // Required on desktop
- * })
- * console.log('New access token:', newTokens.accessToken)
- * ```
- *
- * @throws {Error} If refresh token is invalid or expired
- */
-export async function refreshToken(
-  options: RefreshTokenOptions,
-): Promise<TokenResponse> {
-  const response = await invoke<TokenResponse>(
-    "plugin:google-auth|refresh_token",
-    {
-      payload: options,
-    },
-  );
-  return response;
 }

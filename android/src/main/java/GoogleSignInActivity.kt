@@ -2,39 +2,50 @@ package app.tauri.googleauth
 
 import android.app.Activity
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import com.google.android.gms.auth.api.identity.AuthorizationClient
-import com.google.android.gms.auth.api.identity.AuthorizationRequest
+import com.google.android.gms.auth.api.identity.BeginSignInRequest
 import com.google.android.gms.auth.api.identity.Identity
+import com.google.android.gms.auth.api.identity.SignInClient
 import com.google.android.gms.common.api.ApiException
-import com.google.android.gms.common.api.Scope
 
+/**
+ * Google Sign-In Activity using Native SDK flow (BeginSignInRequest).
+ *
+ * This flow returns an idToken directly from Google's native SDK,
+ * eliminating the need for client_secret on mobile devices.
+ *
+ * Flow:
+ * 1. BeginSignInRequest with GoogleIdTokenRequestOptions
+ * 2. User selects Google account via native UI
+ * 3. Google returns idToken directly (no authorization code exchange!)
+ * 4. Send idToken to your backend for verification
+ *
+ * Security Benefits:
+ * - NO client_secret needed in APK (secure!)
+ * - idToken is cryptographically signed by Google
+ * - Backend verifies: signature, aud, exp, iss claims
+ */
 class GoogleSignInActivity : AppCompatActivity() {
-    
+
     companion object {
         private const val TAG = "GoogleSignInActivity"
     }
-    
-    private lateinit var authorizationClient: AuthorizationClient
-    private lateinit var authorizationLauncher: ActivityResultLauncher<IntentSenderRequest>
+
+    private lateinit var signInClient: SignInClient
+    private lateinit var signInLauncher: ActivityResultLauncher<IntentSenderRequest>
     private var clientId: String? = null
-    private var clientSecret: String? = null
-    private var redirectUri: String? = null
     private lateinit var scopes: Array<String>
-    
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_google_sign_in)
-        
+
         clientId = intent.getStringExtra(GoogleSignInPlugin.CLIENT_ID)
-        clientSecret = intent.getStringExtra(GoogleSignInPlugin.CLIENT_SECRET)
-        redirectUri = intent.getStringExtra(GoogleSignInPlugin.REDIRECT_URI)
         scopes = intent.getStringArrayExtra(GoogleSignInPlugin.SCOPES) ?: emptyArray()
 
         if (clientId == null) {
@@ -47,152 +58,97 @@ class GoogleSignInActivity : AppCompatActivity() {
             return
         }
 
-        authorizationClient = Identity.getAuthorizationClient(this)
-        
-        authorizationLauncher = registerForActivityResult(
+        signInClient = Identity.getSignInClient(this)
+
+        signInLauncher = registerForActivityResult(
             ActivityResultContracts.StartIntentSenderForResult()
         ) { result ->
-            Log.d(TAG, "Authorization launcher result received: resultCode=${result.resultCode}")
-            handleAuthorizationResult(result.resultCode, result.data)
-        }
-        
-        startAuthorization()
-    }
-    
-    private fun startAuthorization() {
-        val requestedScopes = mutableListOf<Scope>()
-        for (scope in scopes) {
-            requestedScopes.add(Scope(scope))
+            Log.d(TAG, "Sign-in launcher result received: resultCode=${result.resultCode}")
+            handleSignInResult(result.resultCode, result.data)
         }
 
-        val authorizationRequest = AuthorizationRequest.Builder()
-            .setRequestedScopes(requestedScopes)
-            .requestOfflineAccess(clientId!!, true) // force consent to get refresh token
+        startSignIn()
+    }
+
+    private fun startSignIn() {
+        // Build Google ID Token request (native flow - returns idToken directly)
+        // This is the recommended flow for mobile apps per Google's OAuth 2.0 best practices
+        val signInRequest = BeginSignInRequest.builder()
+            .setGoogleIdTokenRequestOptions(
+                BeginSignInRequest.GoogleIdTokenRequestOptions.builder()
+                    .setSupported(true)
+                    .setServerClientId(clientId!!)  // Web Client ID from Google Cloud Console
+                    .setFilterByAuthorizedAccounts(false)  // Allow all accounts, not just previously used
+                    .build()
+            )
             .build()
-        
-        authorizationClient.authorize(authorizationRequest)
-            .addOnSuccessListener { authorizationResult ->
-                if (authorizationResult.hasResolution()) {
-                    val pendingIntent = authorizationResult.pendingIntent
-                    
-                    if (pendingIntent != null) {
-                        try {
-                            val intentSenderRequest = IntentSenderRequest.Builder(
-                                pendingIntent.intentSender
-                            ).build()
-                            authorizationLauncher.launch(intentSenderRequest)
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Failed to launch authorization", e)
-                            finishWithError("Failed to launch authorization: ${e.message}")
-                        }
-                    } else {
-                        finishWithError("No pending intent available")
-                    }
-                } else {
-                    val serverAuthCode = authorizationResult.serverAuthCode
-                    val accessToken = authorizationResult.accessToken
-                    val grantedScopes = authorizationResult.grantedScopes
-                    
-                    if (serverAuthCode != null) {
-                        // Convert Set<Scope> to Array<String>
-                        val scopeStrings = grantedScopes?.map { scope -> scope.toString() }?.toTypedArray() ?: emptyArray()
-                        finishWithSuccess(serverAuthCode, scopeStrings)
-                    } else if (accessToken != null) {
-                        finishWithError("Authorization flow did not return auth code")
-                    } else {
-                        finishWithError("No authorization code or access token received")
-                    }
+
+        signInClient.beginSignIn(signInRequest)
+            .addOnSuccessListener { result ->
+                try {
+                    val intentSenderRequest = IntentSenderRequest.Builder(
+                        result.pendingIntent.intentSender
+                    ).build()
+                    signInLauncher.launch(intentSenderRequest)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to launch sign-in", e)
+                    finishWithError("Failed to launch sign-in: ${e.message}")
                 }
             }
             .addOnFailureListener { e ->
-                Log.e(TAG, "Authorization failed: ${e.javaClass.simpleName}: ${e.message}", e)
-                finishWithError("Authorization failed: ${e.message}")
+                Log.e(TAG, "Sign-in failed: ${e.javaClass.simpleName}: ${e.message}", e)
+                finishWithError("Sign-in failed: ${e.message}")
             }
     }
-    
-    private fun handleAuthorizationResult(resultCode: Int, data: Intent?) {
-        // Log intent extras when canceled
-        if (resultCode == RESULT_CANCELED && data != null) {
-            
-            var errorMessage = "User cancelled the authorization"
-            
-            // Try to parse the authorization result even on cancellation to get error details
-            try {
-                val authorizationResult = authorizationClient.getAuthorizationResultFromIntent(data)
-            } catch (e: Exception) {
-                if (e is com.google.android.gms.common.api.ApiException) {
-                    
-                    // Parse specific error codes
-                    errorMessage = when {
-                        e.message?.contains("UNREGISTERED_ON_API_CONSOLE") == true -> 
-                            "App not configured in Google Cloud Console. Please ensure OAuth 2.0 Client ID is properly set up with correct package name and SHA-1 fingerprint."
-                        e.message?.contains("[28405]") == true ->
-                            "OAuth consent screen not configured. Please configure the OAuth consent screen in Google Cloud Console."
-                        e.statusCode == 12501 -> "Sign-in cancelled by user"
-                        e.statusCode == 12500 -> "Sign-in failed. Please check your Google Cloud Console configuration."
-                        e.statusCode == 10 -> "Developer error: Invalid configuration"
-                        e.statusCode == 8 -> {
-                            // Status code 8 can have various meanings, check the message
-                            when {
-                                e.message?.contains("28405") == true -> 
-                                    "OAuth consent screen not configured. Please configure the OAuth consent screen in Google Cloud Console."
-                                else -> e.message ?: "Configuration error"
-                            }
-                        }
-                        else -> e.message ?: "Authorization failed"
-                    }
-                }
-            }
-            
-            finishWithError(errorMessage)
+
+    private fun handleSignInResult(resultCode: Int, data: Intent?) {
+        if (resultCode == RESULT_CANCELED) {
+            finishWithError("Sign-in cancelled by user")
             return
         }
-        
+
         if (resultCode == RESULT_OK && data != null) {
             try {
-                val authorizationResult = authorizationClient.getAuthorizationResultFromIntent(data)
-                
-                val serverAuthCode = authorizationResult.serverAuthCode
-                val accessToken = authorizationResult.accessToken
-                val grantedScopes = authorizationResult.grantedScopes
-                
-                if (serverAuthCode != null) {
-                    // Convert Set<Scope> to Array<String>
-                    val scopeStrings = grantedScopes?.map { scope -> scope.toString() }?.toTypedArray() ?: emptyArray()
-                    finishWithSuccess(serverAuthCode, scopeStrings)
-                } else if (accessToken != null) {
-                    finishWithError("Authorization flow did not return auth code. Ensure offline access is requested.")
+                val credential = signInClient.getSignInCredentialFromIntent(data)
+                val idToken = credential.googleIdToken
+
+                if (idToken != null) {
+                    // Success! Got idToken directly from native SDK
+                    Log.d(TAG, "Successfully received idToken")
+                    finishWithSuccess(idToken)
                 } else {
-                    finishWithError("No authorization code received")
+                    finishWithError("No ID token received from Google Sign-In")
                 }
             } catch (e: ApiException) {
-                Log.e(TAG, "Failed to get authorization result: ${e.statusCode}", e)
-                finishWithError("Failed to get authorization result: ${e.message}")
+                Log.e(TAG, "Failed to get sign-in credential: ${e.statusCode}", e)
+
+                val errorMessage = when (e.statusCode) {
+                    12501 -> "Sign-in cancelled by user"
+                    12500 -> "Sign-in failed. Please check your Google Cloud Console configuration."
+                    10 -> "Developer error: Invalid configuration. Check package name and SHA-1 fingerprint."
+                    else -> "Sign-in failed: ${e.message}"
+                }
+
+                finishWithError(errorMessage)
             } catch (e: Exception) {
-                Log.e(TAG, "Unexpected error processing result", e)
+                Log.e(TAG, "Unexpected error processing sign-in result", e)
                 finishWithError("Unexpected error: ${e.message}")
             }
-        } else if (resultCode == RESULT_CANCELED) {
-            // This case is for RESULT_CANCELED without data
-            finishWithError("Sign-in cancelled")
         } else {
-            finishWithError("Authorization failed with result code: $resultCode")
+            finishWithError("Sign-in failed with result code: $resultCode")
         }
     }
-    
-    private fun finishWithSuccess(authCode: String, grantedScopes: Array<String> = emptyArray()) {
+
+    private fun finishWithSuccess(idToken: String) {
         val intent = Intent().apply {
             val prefix = GoogleSignInPlugin.RESULT_EXTRA_PREFIX
-            putExtra(prefix + GoogleSignInPlugin.AUTH_CODE, authCode)
+            putExtra(prefix + GoogleSignInPlugin.ID_TOKEN, idToken)
             putExtra(prefix + GoogleSignInPlugin.CLIENT_ID, clientId)
-            putExtra(prefix + GoogleSignInPlugin.CLIENT_SECRET, clientSecret)
-            putExtra(prefix + GoogleSignInPlugin.REDIRECT_URI, redirectUri)
-            putExtra(prefix + GoogleSignInPlugin.GRANTED_SCOPES, grantedScopes)
         }
         setResult(Activity.RESULT_OK, intent)
         finish()
     }
-    
+
     private fun finishWithError(errorMessage: String) {
         val intent = Intent().apply {
             val prefix = GoogleSignInPlugin.RESULT_EXTRA_PREFIX
