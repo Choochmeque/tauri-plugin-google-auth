@@ -34,6 +34,8 @@ export interface SignInOptions {
   redirectUri?: string;
   /** Custom HTML message shown after successful authentication (desktop only) */
   successHtmlResponse?: string;
+  /** Authentication flow type (Android only, ignored on other platforms) */
+  flowType?: "native" | "web";
 }
 
 /**
@@ -68,6 +70,8 @@ export async function signIn(options: SignInOptions): Promise<TokenResponse> {
 export interface SignOutOptions {
   /** Access token to revoke with Google (if not provided, performs local sign-out only) */
   accessToken?: string;
+  /** Authentication flow type (Android only, ignored on other platforms) */
+  flowType?: "native" | "web";
 }
 
 /**
@@ -96,11 +100,15 @@ export async function signOut(options?: SignOutOptions): Promise<void> {
  */
 export interface RefreshTokenOptions {
   /** Refresh token obtained from the initial sign-in */
-  refreshToken: string;
+  refreshToken?: string;
   /** Google OAuth2 client ID from Google Cloud Console */
   clientId: string;
   /** Google OAuth2 client secret (required for desktop platforms) */
   clientSecret?: string;
+  /** List of OAuth2 scopes to request */
+  scopes?: string[];
+  /** Authentication flow type (Android only, ignored on other platforms) */
+  flowType?: "native" | "web";
 }
 
 /**
