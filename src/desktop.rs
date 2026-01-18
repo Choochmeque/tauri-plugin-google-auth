@@ -344,8 +344,14 @@ impl<R: Runtime> GoogleAuth<R> {
             .set_client_secret(google_client_secret)
             .set_token_uri(token_url);
 
+        // Refresh token is required for desktop authentication
+        let refresh_token = payload.refresh_token.ok_or_else(|| {
+            crate::Error::ConfigurationError(
+                "Refresh token is required for desktop authentication".to_string(),
+            )
+        })?;
+
         // Execute the refresh token request in a thread
-        let refresh_token = payload.refresh_token;
         let token_response = std::thread::spawn(move || -> crate::Result<_> {
             // Create HTTP client with proper security settings
             let http_client = oauth2::reqwest::blocking::Client::builder()
