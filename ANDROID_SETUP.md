@@ -19,14 +19,22 @@ This guide will help you configure Google Sign-In for your Android app using the
    - Navigate to "APIs & Services" > "Library"
    - Search for and enable "Google Sign-In API" or "Google Identity Toolkit API"
 
-4. Create OAuth 2.0 credentials:
+4. Create **Android** OAuth 2.0 client:
    - Go to "APIs & Services" > "Credentials"
    - Click "Create Credentials" > "OAuth client ID"
    - Select "Android" as the application type
    - Enter your app's package name (e.g., `com.example.myapp`)
    - Provide the SHA-1 certificate fingerprint (see below)
    - Click "Create"
-   - Save the Client ID (you'll need it in your app)
+   - **Note:** You do NOT use this Client ID in your code. It's only used by Google to verify your app.
+
+5. Create **Web Application** OAuth 2.0 client:
+   - Click "Create Credentials" > "OAuth client ID" again
+   - Select "Web application" as the application type
+   - Give it a name (e.g., "Android Web Client")
+   - Click "Create"
+   - **Save this Client ID** - this is what you pass to `clientId` in your code
+   - Save the Client Secret if you plan to use the "web" flow type
 
 ### 1.2 Get SHA-1 Certificate Fingerprint
 
@@ -67,16 +75,6 @@ keytool -list -v -keystore your-release-key.keystore -alias your-key-alias
 **Important:** You need to register **both** SHA-1 fingerprints (debug and release) in Google Cloud Console if you want sign-in to work in both build types.
 
 Copy the SHA-1 fingerprint and add it to your OAuth 2.0 Android client configuration in Google Cloud Console.
-
-### 1.3 Configure Additional Client (Optional)
-
-For some OAuth flows, you may also need a Web client:
-
-1. In Google Cloud Console, create another OAuth 2.0 client
-2. Select "Web application" as the application type
-3. Give it a name (e.g., "Android Web Client")
-4. Add `http://localhost` to authorized redirect URIs
-5. Click "Create" and copy the Client ID and Client Secret
 
 ## Step 2: Configure Your Android App
 
