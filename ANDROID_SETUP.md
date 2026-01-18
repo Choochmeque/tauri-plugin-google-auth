@@ -129,7 +129,6 @@ async function handleSignIn() {
     console.log('Sign-in successful:', tokens);
     console.log('ID Token:', tokens.idToken);
     console.log('Access Token:', tokens.accessToken);
-    console.log('Refresh Token:', tokens.refreshToken);
     console.log('Expires At:', tokens.expiresAt); // Unix timestamp in seconds
     
   } catch (error) {
