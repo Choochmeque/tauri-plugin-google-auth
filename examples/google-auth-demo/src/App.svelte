@@ -11,6 +11,7 @@
   let clientId = $state('')
   let clientSecret = $state('')
   let scopes = $state('openid,email,profile')
+  let flowType = $state('native')
 
   function log(message, data = null) {
     const entry = {
@@ -35,7 +36,8 @@
       const result = await signIn({
         clientId,
         clientSecret: clientSecret || undefined,
-        scopes: scopes.split(',').map(s => s.trim()).filter(Boolean)
+        scopes: scopes.split(',').map(s => s.trim()).filter(Boolean),
+        flowType
       })
       tokens = result
       log('Sign-in successful', result)
@@ -54,7 +56,8 @@
     try {
       log('Signing out...')
       await signOut({
-        accessToken: tokens?.accessToken
+        accessToken: tokens?.accessToken,
+        flowType
       })
       tokens = null
       log('Sign-out successful')
@@ -67,7 +70,7 @@
   }
 
   async function handleRefreshToken() {
-    if (!tokens?.refreshToken) {
+    if (flowType === 'web' && !tokens?.refreshToken) {
       error = 'No refresh token available'
       return
     }
@@ -78,9 +81,11 @@
     try {
       log('Refreshing token...')
       const result = await refreshToken({
-        refreshToken: tokens.refreshToken,
+        refreshToken: tokens?.refreshToken || undefined,
         clientId,
-        clientSecret: clientSecret || undefined
+        clientSecret: clientSecret || undefined,
+        scopes: scopes.split(',').map(s => s.trim()).filter(Boolean),
+        flowType
       })
       tokens = result
       log('Token refreshed', result)
@@ -139,6 +144,13 @@
         placeholder="openid,email,profile"
       />
     </div>
+    <div class="form-group">
+      <label for="flowType">Flow Type (Android only)</label>
+      <select id="flowType" bind:value={flowType}>
+        <option value="native">native</option>
+        <option value="web">web</option>
+      </select>
+    </div>
   </section>
 
   <!-- Actions -->
@@ -151,7 +163,7 @@
       <button onclick={handleSignOut} disabled={loading || !tokens}>
         Sign Out
       </button>
-      <button onclick={handleRefreshToken} disabled={loading || !tokens?.refreshToken}>
+      <button onclick={handleRefreshToken} disabled={loading || !tokens || (flowType === 'web' && !tokens?.refreshToken)}>
         Refresh Token
       </button>
     </div>
@@ -253,9 +265,24 @@
     color: #666;
   }
 
-  .form-group input {
+  .form-group input,
+  .form-group select {
     width: 100%;
     box-sizing: border-box;
+    padding: 8px 12px;
+    font-size: 1em;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: #fff;
+  }
+
+  .form-group select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
   }
 
   .button-group {
@@ -351,6 +378,17 @@
 
     .form-group label {
       color: #aaa;
+    }
+
+    .form-group input,
+    .form-group select {
+      background: #2a2a2a;
+      border-color: #444;
+      color: #eee;
+    }
+
+    .form-group select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23aaa' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
     }
 
     section {

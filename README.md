@@ -203,12 +203,13 @@ const response = await signIn({
 ```typescript
 interface SignInOptions {
   clientId: string;              // Required: Google OAuth client ID
-  clientSecret?: string;         // Required for desktop platforms
+  clientSecret?: string;         // Required for desktop, Android web flow
   scopes?: string[];             // OAuth scopes to request
   hostedDomain?: string;         // Restrict authentication to a specific domain
   loginHint?: string;            // Email hint to pre-fill in the sign-in form
   redirectUri?: string;          // Custom redirect URI (desktop: localhost only)
   successHtmlResponse?: string;  // Custom HTML shown after auth (desktop only)
+  flowType?: 'native' | 'web';   // Android only, default: 'native'. See ANDROID_SETUP.md
 }
 ```
 
@@ -234,7 +235,8 @@ Signs out the current user. Can optionally revoke the access token with Google.
 
 ```typescript
 interface SignOutOptions {
-  accessToken?: string;  // Token to revoke (if not provided, local sign-out only)
+  accessToken?: string;          // Token to revoke (if not provided, local sign-out only)
+  flowType?: 'native' | 'web';   // Android only, default: 'native'
 }
 ```
 
@@ -243,9 +245,11 @@ Refreshes the access token using a refresh token.
 
 ```typescript
 interface RefreshTokenOptions {
-  refreshToken: string;    // Refresh token obtained from initial sign-in
-  clientId: string;        // Google OAuth client ID
-  clientSecret?: string;   // Client secret (required for desktop)
+  refreshToken?: string;         // Required for desktop, Android web flow
+  clientId: string;              // Google OAuth client ID
+  clientSecret?: string;         // Required for desktop, Android web flow
+  scopes?: string[];             // Required for Android native flow
+  flowType?: 'native' | 'web';   // Android only, default: 'native'
 }
 ```
 

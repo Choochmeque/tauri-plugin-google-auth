@@ -9,5 +9,9 @@
             android:name=".GoogleSignInActivity"
             android:theme="@style/Theme.AppCompat.Light.Dialog.Alert"
             android:exported="false" />
+        <activity
+            android:name=".NativeSignInActivity"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:exported="false" />
     </application>
 </manifest>

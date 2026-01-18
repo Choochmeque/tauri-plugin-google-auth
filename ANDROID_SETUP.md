@@ -30,7 +30,22 @@ This guide will help you configure Google Sign-In for your Android app using the
 
 ### 1.2 Get SHA-1 Certificate Fingerprint
 
-#### For Debug Build:
+Android apps are signed with a certificate, and Google uses the SHA-1 fingerprint of this certificate to verify your app's identity.
+
+#### Debug Keystore (Development)
+
+Tauri Android apps use the default Android debug keystore during development. This keystore is automatically created when you first build an Android app and has fixed credentials:
+
+| Property | Value |
+|----------|-------|
+| Location (macOS/Linux) | `~/.android/debug.keystore` |
+| Location (Windows) | `%USERPROFILE%\.android\debug.keystore` |
+| Alias | `androiddebugkey` |
+| Store Password | `android` |
+| Key Password | `android` |
+
+To get the SHA-1 fingerprint:
+
 ```bash
 # On macOS/Linux
 keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
@@ -39,10 +54,17 @@ keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -sto
 keytool -list -v -keystore "%USERPROFILE%\.android\debug.keystore" -alias androiddebugkey -storepass android -keypass android
 ```
 
-#### For Release Build:
+Look for the line starting with `SHA1:` in the output.
+
+#### Release Keystore (Production)
+
+For release builds, you'll use your own signing key:
+
 ```bash
 keytool -list -v -keystore your-release-key.keystore -alias your-key-alias
 ```
+
+**Important:** You need to register **both** SHA-1 fingerprints (debug and release) in Google Cloud Console if you want sign-in to work in both build types.
 
 Copy the SHA-1 fingerprint and add it to your OAuth 2.0 Android client configuration in Google Cloud Console.
 
@@ -174,11 +196,62 @@ async function refreshUserToken(storedRefreshToken: string) {
    - Users can sign in with their Google account
    - The plugin will capture the authorization code and exchange it for tokens
 
+## Authentication Flow Types
+
+Android supports two authentication flows via the `flowType` option:
+
+| flowType | client_secret | refresh_token |
+|----------|---------------|---------------|
+| `"native"` (default) | Not needed | No |
+| `"web"` | Required | Yes |
+
+### Native Flow (default)
+
+Uses [Credential Manager](https://developer.android.com/identity/sign-in/credential-manager-siwg) and [AuthorizationClient](https://developer.android.com/identity/authorization).
+
+**Required Client IDs:**
+- **Web Client ID** - passed as `clientId` parameter, used as [ID token audience](https://developer.android.com/identity/sign-in/credential-manager-siwg#set-google)
+- **Android Client ID** - configured in [Google Cloud Console](https://console.cloud.google.com/apis/credentials) with your package name and SHA-1, matched automatically by the SDK
+
+```typescript
+const tokens = await signIn({
+  clientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+  scopes: ['email', 'profile']
+});
+
+// Refresh (silent)
+const newTokens = await refreshToken({
+  clientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+  scopes: ['email', 'profile']
+});
+```
+
+### Web Flow
+
+Uses OAuth 2.0 authorization code exchange.
+
+```typescript
+const tokens = await signIn({
+  clientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+  clientSecret: 'YOUR_WEB_CLIENT_SECRET',
+  scopes: ['email', 'profile'],
+  flowType: 'web'
+});
+
+// Refresh
+const newTokens = await refreshToken({
+  refreshToken: tokens.refreshToken,
+  clientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+  clientSecret: 'YOUR_WEB_CLIENT_SECRET',
+  flowType: 'web'
+});
+```
+
 ## Important Implementation Details
 
 ### OAuth Flow
 
-The Android implementation uses a traditional OAuth 2.0 authorization code flow:
+The web flow uses a traditional OAuth 2.0 authorization code flow:
 
 1. Opens a web view with Google's authorization endpoint
 2. User authenticates and grants permissions
@@ -228,21 +301,42 @@ All standard OAuth parameters are supported:
 
 ### Common Issues
 
-1. **"Configuration error" on sign-in**:
+1. **"Developer console is not set up correctly [28444]"**:
+   This error means Google cannot verify your app. Check:
+   - **OAuth consent screen** is configured in Google Cloud Console (even "Testing" mode works)
+   - **Android Client ID** exists with correct package name and SHA-1 fingerprint
+   - **Web Client ID** exists (required for native flow)
+   - Your test user email is added to the OAuth consent screen if in "Testing" mode
+   - SHA-1 matches your build type (debug keystore for `tauri android dev`)
+
+2. **"Configuration error" on sign-in**:
    - Check that your SHA-1 fingerprint is added to Google Cloud Console
    - Ensure your package name matches exactly with the one in Google Cloud Console
    - Verify the client ID is correct
 
-2. **Sign-in fails silently**:
+3. **Sign-in fails silently**:
    - Check that internet permissions are granted
    - Verify Google Play Services is available on the device
    - Check logcat for detailed error messages
 
-3. **"User cancelled the sign-in flow"**:
+4. **"User cancelled the sign-in flow"**:
    - User closed the authentication web view
    - This is normal user behavior, handle gracefully in your app
 
-4. **Token refresh fails**:
+5. **"Sign-in cancelled: activity is cancelled by the user"** (native flow):
+   This error occurs when the account picker appears but fails after selecting an account. The cause is almost always using the **wrong client ID type**:
+   - You must pass the **Web Application client ID** to the `clientId` parameter, NOT the Android client ID
+   - The Android client ID (with your package name + SHA-1) is only used internally by Google to verify your app
+   - Create both client types in Google Cloud Console, but only pass the Web client ID to your code
+
+   ```typescript
+   // CORRECT: Use Web Application client ID
+   signIn({ clientId: 'WEB_CLIENT_ID.apps.googleusercontent.com', scopes: [...] })
+
+   // WRONG: Using Android client ID will cause this error
+   ```
+
+6. **Token refresh fails**:
    - Ensure offline access scope was requested during initial sign-in
    - Check that refresh token is being stored properly
    - Verify client secret is provided if required

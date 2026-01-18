@@ -1,5 +1,13 @@
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum FlowType {
+    #[default]
+    Native,
+    Web,
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SignInRequest {
@@ -16,6 +24,8 @@ pub struct SignInRequest {
     pub redirect_uri: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub success_html_response: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub flow_type: Option<FlowType>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -33,6 +43,8 @@ pub struct TokenResponse {
 pub struct SignOutRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub access_token: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub flow_type: Option<FlowType>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -44,8 +56,13 @@ pub struct SignOutResponse {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RefreshTokenRequest {
-    pub refresh_token: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub refresh_token: Option<String>,
     pub client_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub client_secret: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scopes: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub flow_type: Option<FlowType>,
 }
