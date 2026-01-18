@@ -382,7 +382,7 @@
 
     .form-group input,
     .form-group select {
-      background: #2a2a2a;
+      background-color: #2a2a2a;
       border-color: #444;
       color: #eee;
     }
