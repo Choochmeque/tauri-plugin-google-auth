@@ -15,11 +15,13 @@ This guide will help you configure Google Sign-In for your Android app using the
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Create a new project or select an existing one
-3. Enable required APIs:
-   - Navigate to "APIs & Services" > "Library"
-   - Search for and enable "Google Sign-In API" or "Google Identity Toolkit API"
+3. Configure [OAuth consent screen](https://console.cloud.google.com/apis/credentials/consent) (required)
 
-4. Create **Android** OAuth 2.0 client:
+#### Configure for Native Flow (default)
+
+Uses [Credential Manager](https://developer.android.com/identity/sign-in/credential-manager-siwg) + [AuthorizationClient](https://developer.android.com/identity/authorization). No `client_secret` needed, but no `refresh_token` returned.
+
+1. Create **Android** OAuth 2.0 client (for app verification):
    - Go to "APIs & Services" > "Credentials"
    - Click "Create Credentials" > "OAuth client ID"
    - Select "Android" as the application type
@@ -28,53 +30,48 @@ This guide will help you configure Google Sign-In for your Android app using the
    - Click "Create"
    - **Note:** You do NOT use this Client ID in your code. It's only used by Google to verify your app.
 
-5. Create **Web Application** OAuth 2.0 client:
-   - Click "Create Credentials" > "OAuth client ID" again
+2. Create **Web Application** OAuth 2.0 client (for your code):
+   - Click "Create Credentials" > "OAuth client ID"
    - Select "Web application" as the application type
-   - Give it a name (e.g., "Android Web Client")
    - Click "Create"
    - **Save this Client ID** - this is what you pass to `clientId` in your code
-   - Save the Client Secret if you plan to use the "web" flow type
 
-### 1.2 Get SHA-1 Certificate Fingerprint
+##### Get SHA-1 Certificate Fingerprint
 
-Android apps are signed with a certificate, and Google uses the SHA-1 fingerprint of this certificate to verify your app's identity.
+Required for Android Client ID. Google uses this to verify your app.
 
-#### Debug Keystore (Development)
-
-Tauri Android apps use the default Android debug keystore during development. This keystore is automatically created when you first build an Android app and has fixed credentials:
-
-| Property | Value |
-|----------|-------|
-| Location (macOS/Linux) | `~/.android/debug.keystore` |
-| Location (Windows) | `%USERPROFILE%\.android\debug.keystore` |
-| Alias | `androiddebugkey` |
-| Store Password | `android` |
-| Key Password | `android` |
-
-To get the SHA-1 fingerprint:
+**Debug Keystore (Development):**
 
 ```bash
-# On macOS/Linux
-keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
+# macOS/Linux
+keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android
 
-# On Windows
-keytool -list -v -keystore "%USERPROFILE%\.android\debug.keystore" -alias androiddebugkey -storepass android -keypass android
+# Windows
+keytool -list -v -keystore "%USERPROFILE%\.android\debug.keystore" -alias androiddebugkey -storepass android
 ```
 
-Look for the line starting with `SHA1:` in the output.
+Default credentials: alias `androiddebugkey`, password `android`.
 
-#### Release Keystore (Production)
-
-For release builds, you'll use your own signing key:
+**Release Keystore (Production):**
 
 ```bash
 keytool -list -v -keystore your-release-key.keystore -alias your-key-alias
 ```
 
-**Important:** You need to register **both** SHA-1 fingerprints (debug and release) in Google Cloud Console if you want sign-in to work in both build types.
+**Important:** Register both debug and release SHA-1 fingerprints if you want sign-in to work in both build types.
 
-Copy the SHA-1 fingerprint and add it to your OAuth 2.0 Android client configuration in Google Cloud Console.
+#### Configure for Web Flow
+
+Uses [OAuth 2.0 authorization code](https://developers.google.com/identity/protocols/oauth2/native-app) exchange via Custom Tabs. Requires `client_secret`, returns `refresh_token`.
+
+1. Create **Web Application** OAuth 2.0 client:
+   - Go to "APIs & Services" > "Credentials"
+   - Click "Create Credentials" > "OAuth client ID"
+   - Select "Web application" as the application type
+   - Click "Create"
+   - **Save the Client ID and Client Secret**
+
+**Note:** Android Client ID is NOT required for web flow.
 
 ## Step 2: Configure Your Android App
 
@@ -121,15 +118,12 @@ import {
   refreshToken 
 } from '@choochmeque/tauri-plugin-google-auth-api';
 
-// Sign in with Google
+// Sign in with Google (native flow)
 async function handleSignIn() {
   try {
     const tokens = await signIn({
-      clientId: 'YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com',
-      clientSecret: 'YOUR_CLIENT_SECRET', // Optional, may be needed for certain flows
-      scopes: ['email', 'profile'], // OAuth scopes to request
-      hostedDomain: 'example.com', // Optional: restrict to specific domain
-      loginHint: 'user@example.com' // Optional: pre-fill email
+      clientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+      scopes: ['email', 'profile']
     });
     
     console.log('Sign-in successful:', tokens);
@@ -150,24 +144,22 @@ async function handleSignIn() {
   }
 }
 
-// Sign out
+// Sign out (native flow)
 async function handleSignOut() {
   try {
-    await signOut({
-      accessToken: 'USER_ACCESS_TOKEN' // Optional: revoke token with Google
-    });
+    await signOut();
     console.log('User signed out');
   } catch (error) {
     console.error('Sign out failed:', error);
   }
 }
 
-// Refresh credentials
-async function refreshUserToken(storedRefreshToken: string) {
+// Refresh access token (native flow - silent, no user prompt)
+async function handleRefreshToken() {
   try {
     const tokens = await refreshToken({
-      refreshToken: storedRefreshToken,
-      clientId: 'YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com'
+      clientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+      scopes: ['email', 'profile']
     });
     console.log('Refreshed tokens:', tokens);
     console.log('New Access Token:', tokens.accessToken);
@@ -261,39 +253,15 @@ The web flow uses a traditional OAuth 2.0 authorization code flow:
 The plugin provides:
 - **ID Token**: JWT containing user information
 - **Access Token**: OAuth token for accessing Google APIs
-- **Refresh Token**: Token for obtaining new access tokens (when offline scope is requested)
+- **Refresh Token**: Token for obtaining new access tokens (web flow only)
 - **Expiration Time**: Unix timestamp in seconds indicating when the access token expires
 
 ### Supported Parameters
 
-All standard OAuth parameters are supported:
-- `clientId`: Required - Your Android OAuth client ID
-- `clientSecret`: Optional - May be required for certain flows
-- `scopes`: OAuth scopes to request (email and profile are common)
-- `hostedDomain`: Restrict authentication to a specific Google Workspace domain
-- `loginHint`: Pre-fill the email field in the sign-in form
-
-## Security Best Practices
-
-1. **Client ID Security**: 
-   - Use environment variables or build configuration for Client ID
-   - Never hardcode sensitive information in your source code
-
-2. **Token Validation**:
-   - Always validate ID tokens on your backend server
-   - Verify the token signature and claims before trusting the user identity
-
-3. **Secure Storage**:
-   - The plugin stores tokens securely using Android's SharedPreferences with encryption
-   - Clear tokens when user signs out
-
-4. **HTTPS Only**:
-   - All OAuth communications use HTTPS
-   - Ensure your redirect URIs use secure protocols
-
-5. **Session Management**:
-   - Implement proper session timeout
-   - Clear sensitive data when user signs out
+- `clientId`: Required - Your **Web Application** client ID
+- `clientSecret`: Required for web flow only
+- `scopes`: OAuth scopes to request
+- `flowType`: `"native"` (default) or `"web"`
 
 ## Troubleshooting
 
