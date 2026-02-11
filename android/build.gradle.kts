@@ -43,7 +43,7 @@ dependencies {
     implementation("androidx.constraintlayout:constraintlayout:2.2.1")
 
     // Google Identity Services for authorization flow
-    implementation("com.google.android.gms:play-services-auth:21.4.0")
+    implementation("com.google.android.gms:play-services-auth:21.5.0")
 
     // Credential Manager for native sign-in flow
     implementation("androidx.credentials:credentials:1.3.0")
