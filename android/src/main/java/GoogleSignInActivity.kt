@@ -67,7 +67,7 @@ class GoogleSignInActivity : AppCompatActivity() {
 
         val authorizationRequest = AuthorizationRequest.Builder()
             .setRequestedScopes(requestedScopes)
-            .requestOfflineAccess(clientId!!, true) // force consent to get refresh token
+            .requestOfflineAccess(clientId!!)
             .build()
         
         authorizationClient.authorize(authorizationRequest)
