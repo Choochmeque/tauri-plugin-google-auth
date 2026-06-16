@@ -1,6 +1,6 @@
 use tauri::{
-    plugin::{Builder, TauriPlugin},
     Manager, Runtime,
+    plugin::{Builder, TauriPlugin},
 };
 
 pub use models::*;
@@ -33,6 +33,7 @@ impl<R: Runtime, T: Manager<R>> crate::GoogleAuthExt<R> for T {
 }
 
 /// Initializes the plugin.
+#[must_use]
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("google-auth")
         .invoke_handler(tauri::generate_handler![

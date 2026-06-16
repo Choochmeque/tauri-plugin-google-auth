@@ -1,19 +1,21 @@
-use tauri::{command, AppHandle, Runtime};
+use tauri::{AppHandle, Runtime, command};
 
-use crate::models::*;
 use crate::GoogleAuthExt;
 use crate::Result;
+use crate::models::{
+    RefreshTokenRequest, SignInRequest, SignOutRequest, SignOutResponse, TokenResponse,
+};
 
 #[command]
-pub(crate) async fn sign_in<R: Runtime>(
+pub async fn sign_in<R: Runtime>(
     app: AppHandle<R>,
     payload: SignInRequest,
-) -> Result<crate::TokenResponse> {
+) -> Result<TokenResponse> {
     app.google_auth().sign_in(payload)
 }
 
 #[command]
-pub(crate) async fn sign_out<R: Runtime>(
+pub async fn sign_out<R: Runtime>(
     app: AppHandle<R>,
     payload: SignOutRequest,
 ) -> Result<SignOutResponse> {
@@ -21,7 +23,7 @@ pub(crate) async fn sign_out<R: Runtime>(
 }
 
 #[command]
-pub(crate) async fn refresh_token<R: Runtime>(
+pub async fn refresh_token<R: Runtime>(
     app: AppHandle<R>,
     payload: RefreshTokenRequest,
 ) -> Result<TokenResponse> {

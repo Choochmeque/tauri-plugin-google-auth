@@ -4,7 +4,7 @@ use oauth2::basic::{
 };
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
-use tauri::{plugin::PluginApi, AppHandle, Runtime};
+use tauri::{AppHandle, Runtime, plugin::PluginApi};
 
 use oauth2::{
     AuthUrl, AuthorizationCode, Client, ClientId, ClientSecret, CsrfToken, EndpointNotSet,
@@ -16,7 +16,7 @@ use url::Url;
 use std::io::{BufRead, BufReader, Write};
 use std::net::TcpListener;
 
-use crate::models::*;
+use crate::models::{RefreshTokenRequest, SignInRequest, SignOutRequest, SignOutResponse};
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 pub struct GoogleTokenFields {
@@ -52,6 +52,7 @@ const LOCALHOST_ADDR: &str = "127.0.0.1";
 const DEFAULT_REDIRECT_HOST: &str = "localhost";
 const SUCCESS_HTML_RESPONSE: &str = "Go back to your app :)";
 
+#[allow(clippy::unnecessary_wraps)]
 pub fn init<R: Runtime, C: DeserializeOwned>(
     app: &AppHandle<R>,
     _api: PluginApi<R, C>,
@@ -63,6 +64,7 @@ pub fn init<R: Runtime, C: DeserializeOwned>(
 pub struct GoogleAuth<R: Runtime>(AppHandle<R>);
 
 impl<R: Runtime> GoogleAuth<R> {
+    #[allow(clippy::unused_self, clippy::too_many_lines)]
     pub fn sign_in(&self, payload: SignInRequest) -> crate::Result<crate::TokenResponse> {
         // Validate that scopes are provided
         let scopes = payload.scopes.ok_or_else(|| {
@@ -142,7 +144,7 @@ impl<R: Runtime> GoogleAuth<R> {
             .set_client_secret(google_client_secret)
             .set_auth_uri(auth_url)
             .set_token_uri(token_url)
-            .set_redirect_uri(RedirectUrl::new(redirect_url.clone()).map_err(|_| {
+            .set_redirect_uri(RedirectUrl::new(redirect_url).map_err(|_| {
                 crate::Error::ConfigurationError("Invalid redirect URL".to_string())
             })?)
             // Google supports OAuth 2.0 Token Revocation (RFC-7009)
@@ -262,24 +264,25 @@ impl<R: Runtime> GoogleAuth<R> {
         // Return the token response
         Ok(crate::TokenResponse {
             id_token,
-            access_token: token_response.access_token().secret().to_string(),
-            scopes: token_response
-                .scopes()
-                .map(|s| s.iter().map(|sc| sc.as_ref().to_string()).collect())
-                .unwrap_or_else(Vec::new),
-            refresh_token: token_response
-                .refresh_token()
-                .map(|t| t.secret().to_string()),
+            access_token: token_response.access_token().secret().clone(),
+            scopes: token_response.scopes().map_or_else(Vec::new, |s| {
+                s.iter().map(|sc| sc.as_ref().to_string()).collect()
+            }),
+            refresh_token: token_response.refresh_token().map(|t| t.secret().clone()),
             expires_at: token_response.expires_in().map(|d| {
-                let now = std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap_or_default()
-                    .as_secs() as i64;
-                now + d.as_secs() as i64
+                let now = i64::try_from(
+                    std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_secs(),
+                )
+                .unwrap_or(i64::MAX);
+                now.saturating_add(i64::try_from(d.as_secs()).unwrap_or(i64::MAX))
             }),
         })
     }
 
+    #[allow(clippy::unused_self)]
     pub fn sign_out(&self, payload: SignOutRequest) -> crate::Result<SignOutResponse> {
         // If no access token provided, just return success (local sign out)
         let Some(access_token) = payload.access_token else {
@@ -287,7 +290,7 @@ impl<R: Runtime> GoogleAuth<R> {
         };
 
         // Revoke the token with Google
-        let response = std::thread::spawn(move || -> crate::Result<_> {
+        let _response = std::thread::spawn(move || -> crate::Result<_> {
             // Create HTTP client
             let http_client = oauth2::reqwest::blocking::Client::builder()
                 .redirect(oauth2::reqwest::redirect::Policy::none())
@@ -310,16 +313,12 @@ impl<R: Runtime> GoogleAuth<R> {
             crate::Error::AuthenticationFailed("Token exchange thread panicked".to_string())
         })??;
 
-        // Check if revocation was successful
-        if response.status().is_success() {
-            Ok(SignOutResponse { success: true })
-        } else {
-            // Even if revocation fails, we can still return success
-            // as the token might already be invalid or expired
-            Ok(SignOutResponse { success: true })
-        }
+        // Always report success — the user-facing sign-out is complete regardless
+        // of the revocation HTTP status (the token may already be invalid or expired).
+        Ok(SignOutResponse { success: true })
     }
 
+    #[allow(clippy::unused_self)]
     pub fn refresh_token(
         &self,
         payload: RefreshTokenRequest,
@@ -381,20 +380,20 @@ impl<R: Runtime> GoogleAuth<R> {
         // Return the refreshed token response
         Ok(crate::TokenResponse {
             id_token,
-            access_token: token_response.access_token().secret().to_string(),
-            scopes: token_response
-                .scopes()
-                .map(|s| s.iter().map(|sc| sc.as_ref().to_string()).collect())
-                .unwrap_or_else(Vec::new),
-            refresh_token: token_response
-                .refresh_token()
-                .map(|t| t.secret().to_string()),
+            access_token: token_response.access_token().secret().clone(),
+            scopes: token_response.scopes().map_or_else(Vec::new, |s| {
+                s.iter().map(|sc| sc.as_ref().to_string()).collect()
+            }),
+            refresh_token: token_response.refresh_token().map(|t| t.secret().clone()),
             expires_at: token_response.expires_in().map(|d| {
-                let now = std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap_or_default()
-                    .as_secs() as i64;
-                now + d.as_secs() as i64
+                let now = i64::try_from(
+                    std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_secs(),
+                )
+                .unwrap_or(i64::MAX);
+                now.saturating_add(i64::try_from(d.as_secs()).unwrap_or(i64::MAX))
             }),
         })
     }
