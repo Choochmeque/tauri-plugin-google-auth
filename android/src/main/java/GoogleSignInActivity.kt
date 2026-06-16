@@ -95,7 +95,7 @@ class GoogleSignInActivity : AppCompatActivity() {
                     
                     if (serverAuthCode != null) {
                         // Convert Set<Scope> to Array<String>
-                        val scopeStrings = grantedScopes?.map { scope -> scope.toString() }?.toTypedArray() ?: emptyArray()
+                        val scopeStrings = grantedScopes.map { scope -> scope.toString() }.toTypedArray()
                         finishWithSuccess(serverAuthCode, scopeStrings)
                     } else if (accessToken != null) {
                         finishWithError("Authorization flow did not return auth code")
@@ -118,7 +118,7 @@ class GoogleSignInActivity : AppCompatActivity() {
             
             // Try to parse the authorization result even on cancellation to get error details
             try {
-                val authorizationResult = authorizationClient.getAuthorizationResultFromIntent(data)
+                authorizationClient.getAuthorizationResultFromIntent(data)
             } catch (e: Exception) {
                 if (e is com.google.android.gms.common.api.ApiException) {
                     
@@ -158,7 +158,7 @@ class GoogleSignInActivity : AppCompatActivity() {
                 
                 if (serverAuthCode != null) {
                     // Convert Set<Scope> to Array<String>
-                    val scopeStrings = grantedScopes?.map { scope -> scope.toString() }?.toTypedArray() ?: emptyArray()
+                    val scopeStrings = grantedScopes.map { scope -> scope.toString() }.toTypedArray()
                     finishWithSuccess(serverAuthCode, scopeStrings)
                 } else if (accessToken != null) {
                     finishWithError("Authorization flow did not return auth code. Ensure offline access is requested.")

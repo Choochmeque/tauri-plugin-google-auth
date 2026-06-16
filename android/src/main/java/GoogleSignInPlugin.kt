@@ -22,11 +22,11 @@ import app.tauri.plugin.Plugin
 import com.google.android.gms.auth.api.identity.AuthorizationClient
 import com.google.android.gms.auth.api.identity.AuthorizationRequest
 import com.google.android.gms.auth.api.identity.Identity
-import com.google.android.gms.auth.api.identity.SignInClient
 import com.google.android.gms.common.api.Scope
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -90,7 +90,6 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
         .build()
     private val gson = Gson()
     private lateinit var authorizationClient: AuthorizationClient
-    private lateinit var signInClient: SignInClient
     private lateinit var credentialManager: CredentialManager
 
     override fun load(webView: WebView) {
@@ -98,7 +97,6 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
         RESULT_EXTRA_PREFIX = activity.packageName + "."
 
         authorizationClient = Identity.getAuthorizationClient(activity)
-        signInClient = Identity.getSignInClient(activity)
         credentialManager = CredentialManager.create(activity)
     }
     
@@ -269,15 +267,19 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
         }
         
         val data = result.data
-        val authCode = data?.getStringExtra(RESULT_EXTRA_PREFIX + AUTH_CODE)
-        val errorMessage = data?.getStringExtra(RESULT_EXTRA_PREFIX + ERROR_MESSAGE)
-        
+        if (data == null) {
+            invoke.reject("No authorization code received")
+            return
+        }
+
+        val errorMessage = data.getStringExtra(RESULT_EXTRA_PREFIX + ERROR_MESSAGE)
         if (errorMessage != null) {
             invoke.reject(errorMessage)
             return
         }
-        
-        if (authCode == null || data == null) {
+
+        val authCode = data.getStringExtra(RESULT_EXTRA_PREFIX + AUTH_CODE)
+        if (authCode == null) {
             invoke.reject("No authorization code received")
             return
         }
@@ -340,10 +342,10 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
         }
 
         try {
-            signInClient.signOut().await()
-            Log.d(TAG, "Signed out from Google Sign-In client")
+            credentialManager.clearCredentialState(ClearCredentialStateRequest())
+            Log.d(TAG, "Credential state cleared")
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to sign out from Google Sign-In client: ${e.message}")
+            Log.w(TAG, "Failed to clear credential state: ${e.message}")
         }
 
         val ret = JSObject()
@@ -466,7 +468,10 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
         val responseBody = response.body?.string()
             ?: throw Exception("Empty response from token endpoint")
         
-        gson.fromJson(responseBody, Map::class.java) as Map<String, Any?>
+        gson.fromJson<Map<String, Any?>>(
+            responseBody,
+            object : TypeToken<Map<String, Any?>>() {}.type
+        )
     }
     
     private suspend fun refreshAccessToken(
@@ -498,7 +503,10 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
         val responseBody = response.body?.string()
             ?: throw Exception("Empty response from token endpoint")
         
-        gson.fromJson(responseBody, Map::class.java) as Map<String, Any?>
+        gson.fromJson<Map<String, Any?>>(
+            responseBody,
+            object : TypeToken<Map<String, Any?>>() {}.type
+        )
     }
     
     private suspend fun revokeAccessToken(accessToken: String) = withContext(Dispatchers.IO) {
