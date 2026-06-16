@@ -4,12 +4,15 @@ use tauri::{
     plugin::{PluginApi, PluginHandle},
 };
 
-use crate::models::*;
+use crate::models::{
+    RefreshTokenRequest, SignInRequest, SignOutRequest, SignOutResponse, TokenResponse,
+};
 
 #[cfg(target_os = "ios")]
 tauri::ios_plugin_binding!(init_plugin_google_auth);
 
 // initializes the Kotlin or Swift plugin classes
+#[allow(clippy::needless_pass_by_value)]
 pub fn init<R: Runtime, C: DeserializeOwned>(
     _app: &AppHandle<R>,
     api: PluginApi<R, C>,
