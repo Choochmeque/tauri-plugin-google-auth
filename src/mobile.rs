@@ -28,21 +28,27 @@ pub fn init<R: Runtime, C: DeserializeOwned>(
 pub struct GoogleAuth<R: Runtime>(PluginHandle<R>);
 
 impl<R: Runtime> GoogleAuth<R> {
-    pub fn sign_in(&self, payload: SignInRequest) -> crate::Result<TokenResponse> {
+    pub async fn sign_in(&self, payload: SignInRequest) -> crate::Result<TokenResponse> {
         self.0
-            .run_mobile_plugin("signIn", payload)
+            .run_mobile_plugin_async("signIn", payload)
+            .await
             .map_err(Into::into)
     }
 
-    pub fn sign_out(&self, payload: SignOutRequest) -> crate::Result<SignOutResponse> {
+    pub async fn sign_out(&self, payload: SignOutRequest) -> crate::Result<SignOutResponse> {
         self.0
-            .run_mobile_plugin("signOut", payload)
+            .run_mobile_plugin_async("signOut", payload)
+            .await
             .map_err(Into::into)
     }
 
-    pub fn refresh_token(&self, payload: RefreshTokenRequest) -> crate::Result<TokenResponse> {
+    pub async fn refresh_token(
+        &self,
+        payload: RefreshTokenRequest,
+    ) -> crate::Result<TokenResponse> {
         self.0
-            .run_mobile_plugin("refreshToken", payload)
+            .run_mobile_plugin_async("refreshToken", payload)
+            .await
             .map_err(Into::into)
     }
 }

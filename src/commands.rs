@@ -11,7 +11,7 @@ pub async fn sign_in<R: Runtime>(
     app: AppHandle<R>,
     payload: SignInRequest,
 ) -> Result<TokenResponse> {
-    app.google_auth().sign_in(payload)
+    app.google_auth().sign_in(payload).await
 }
 
 #[command]
@@ -19,7 +19,7 @@ pub async fn sign_out<R: Runtime>(
     app: AppHandle<R>,
     payload: SignOutRequest,
 ) -> Result<SignOutResponse> {
-    app.google_auth().sign_out(payload)
+    app.google_auth().sign_out(payload).await
 }
 
 #[command]
@@ -27,5 +27,5 @@ pub async fn refresh_token<R: Runtime>(
     app: AppHandle<R>,
     payload: RefreshTokenRequest,
 ) -> Result<TokenResponse> {
-    app.google_auth().refresh_token(payload)
+    app.google_auth().refresh_token(payload).await
 }

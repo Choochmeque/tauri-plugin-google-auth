@@ -13,8 +13,8 @@ use oauth2::{
 };
 use url::Url;
 
-use std::io::{BufRead, BufReader, Write};
-use std::net::TcpListener;
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::net::TcpListener;
 
 use crate::models::{RefreshTokenRequest, SignInRequest, SignOutRequest, SignOutResponse};
 
@@ -65,7 +65,7 @@ pub struct GoogleAuth<R: Runtime>(AppHandle<R>);
 
 impl<R: Runtime> GoogleAuth<R> {
     #[allow(clippy::unused_self, clippy::too_many_lines)]
-    pub fn sign_in(&self, payload: SignInRequest) -> crate::Result<crate::TokenResponse> {
+    pub async fn sign_in(&self, payload: SignInRequest) -> crate::Result<crate::TokenResponse> {
         // Validate that scopes are provided
         let scopes = payload.scopes.ok_or_else(|| {
             crate::Error::ConfigurationError(
@@ -120,14 +120,18 @@ impl<R: Runtime> GoogleAuth<R> {
         // Bind to the TCP listener first to get the actual port
         let listener = if let Some(p) = port {
             // Try to bind to the specific port
-            TcpListener::bind(format!("{LOCALHOST_ADDR}:{p}")).map_err(|e| {
-                crate::Error::NetworkError(format!("Failed to bind to port {p}: {e}"))
-            })?
+            TcpListener::bind(format!("{LOCALHOST_ADDR}:{p}"))
+                .await
+                .map_err(|e| {
+                    crate::Error::NetworkError(format!("Failed to bind to port {p}: {e}"))
+                })?
         } else {
             // Bind to any available port (port 0 means OS assigns an available port)
-            TcpListener::bind(format!("{LOCALHOST_ADDR}:0")).map_err(|e| {
-                crate::Error::NetworkError(format!("Failed to bind to any available port: {e}"))
-            })?
+            TcpListener::bind(format!("{LOCALHOST_ADDR}:0"))
+                .await
+                .map_err(|e| {
+                    crate::Error::NetworkError(format!("Failed to bind to any available port: {e}"))
+                })?
         };
 
         // Get the actual port that was bound
@@ -182,16 +186,15 @@ impl<R: Runtime> GoogleAuth<R> {
 
         let (code, _state) = {
             // The server will terminate itself after collecting the first code.
-            let mut stream = listener.incoming().flatten().next().ok_or_else(|| {
-                crate::Error::NetworkError(
-                    "Listener terminated without accepting a connection".to_string(),
-                )
+            let (stream, _addr) = listener.accept().await.map_err(|e| {
+                crate::Error::NetworkError(format!(
+                    "Listener terminated without accepting a connection: {e}"
+                ))
             })?;
-
-            let mut reader = BufReader::new(&stream);
+            let mut stream = BufReader::new(stream);
 
             let mut request_line = String::new();
-            reader.read_line(&mut request_line)?;
+            stream.read_line(&mut request_line).await?;
 
             let request_path = request_line.split_whitespace().nth(1).ok_or_else(|| {
                 crate::Error::NetworkError("Invalid HTTP request format".to_string())
@@ -226,38 +229,29 @@ impl<R: Runtime> GoogleAuth<R> {
                 success_message.len(),
                 success_message
             );
-            stream.write_all(response.as_bytes())?;
+            stream.get_mut().write_all(response.as_bytes()).await?;
 
             (code, state)
         };
 
-        let token_response = std::thread::spawn(move || -> crate::Result<_> {
-            // Create HTTP client with proper security settings
-            let http_client = oauth2::reqwest::blocking::Client::builder()
-                // Following redirects opens the client up to SSRF vulnerabilities
-                .redirect(oauth2::reqwest::redirect::Policy::none())
-                .build()
-                .map_err(|e| {
-                    crate::Error::NetworkError(format!("Failed to build HTTP client: {e}"))
-                })?;
+        // Create HTTP client with proper security settings
+        let http_client = oauth2::reqwest::ClientBuilder::new()
+            // Following redirects opens the client up to SSRF vulnerabilities
+            .redirect(oauth2::reqwest::redirect::Policy::none())
+            .build()
+            .map_err(|e| crate::Error::NetworkError(format!("Failed to build HTTP client: {e}")))?;
 
-            // Exchange the code with a token.
-            let token_response = client
-                .exchange_code(code)
-                .set_pkce_verifier(pkce_code_verifier)
-                .request(&http_client)
-                .map_err(|e| {
-                    crate::Error::AuthenticationFailed(format!(
-                        "Failed to exchange code for token: {e}"
-                    ))
-                })?;
-
-            Ok(token_response)
-        })
-        .join()
-        .map_err(|_| {
-            crate::Error::AuthenticationFailed("Token exchange thread panicked".to_string())
-        })??;
+        // Exchange the code with a token.
+        let token_response = client
+            .exchange_code(code)
+            .set_pkce_verifier(pkce_code_verifier)
+            .request_async(&http_client)
+            .await
+            .map_err(|e| {
+                crate::Error::AuthenticationFailed(format!(
+                    "Failed to exchange code for token: {e}"
+                ))
+            })?;
 
         let id_token = token_response.extra_fields().id_token.clone();
 
@@ -283,35 +277,25 @@ impl<R: Runtime> GoogleAuth<R> {
     }
 
     #[allow(clippy::unused_self)]
-    pub fn sign_out(&self, payload: SignOutRequest) -> crate::Result<SignOutResponse> {
+    pub async fn sign_out(&self, payload: SignOutRequest) -> crate::Result<SignOutResponse> {
         // If no access token provided, just return success (local sign out)
         let Some(access_token) = payload.access_token else {
             return Ok(SignOutResponse { success: true });
         };
 
+        // Create HTTP client
+        let http_client = oauth2::reqwest::ClientBuilder::new()
+            .redirect(oauth2::reqwest::redirect::Policy::none())
+            .build()
+            .map_err(|e| crate::Error::NetworkError(format!("Failed to build HTTP client: {e}")))?;
+
         // Revoke the token with Google
-        let _response = std::thread::spawn(move || -> crate::Result<_> {
-            // Create HTTP client
-            let http_client = oauth2::reqwest::blocking::Client::builder()
-                .redirect(oauth2::reqwest::redirect::Policy::none())
-                .build()
-                .map_err(|e| {
-                    crate::Error::NetworkError(format!("Failed to build HTTP client: {e}"))
-                })?;
-
-            // Send revocation request
-            let response = http_client
-                .post(GOOGLE_REVOCATION_URL)
-                .form(&[("token", access_token.as_str())])
-                .send()
-                .map_err(|e| crate::Error::NetworkError(format!("Failed to revoke token: {e}")))?;
-
-            Ok(response)
-        })
-        .join()
-        .map_err(|_| {
-            crate::Error::AuthenticationFailed("Token exchange thread panicked".to_string())
-        })??;
+        let _response = http_client
+            .post(GOOGLE_REVOCATION_URL)
+            .form(&[("token", access_token.as_str())])
+            .send()
+            .await
+            .map_err(|e| crate::Error::NetworkError(format!("Failed to revoke token: {e}")))?;
 
         // Always report success — the user-facing sign-out is complete regardless
         // of the revocation HTTP status (the token may already be invalid or expired).
@@ -319,7 +303,7 @@ impl<R: Runtime> GoogleAuth<R> {
     }
 
     #[allow(clippy::unused_self)]
-    pub fn refresh_token(
+    pub async fn refresh_token(
         &self,
         payload: RefreshTokenRequest,
     ) -> crate::Result<crate::TokenResponse> {
@@ -350,30 +334,20 @@ impl<R: Runtime> GoogleAuth<R> {
             )
         })?;
 
-        // Execute the refresh token request in a thread
-        let token_response = std::thread::spawn(move || -> crate::Result<_> {
-            // Create HTTP client with proper security settings
-            let http_client = oauth2::reqwest::blocking::Client::builder()
-                .redirect(oauth2::reqwest::redirect::Policy::none())
-                .build()
-                .map_err(|e| {
-                    crate::Error::NetworkError(format!("Failed to build HTTP client: {e}"))
-                })?;
+        // Create HTTP client with proper security settings
+        let http_client = oauth2::reqwest::ClientBuilder::new()
+            .redirect(oauth2::reqwest::redirect::Policy::none())
+            .build()
+            .map_err(|e| crate::Error::NetworkError(format!("Failed to build HTTP client: {e}")))?;
 
-            // Exchange the refresh token for new tokens
-            let token_response = client
-                .exchange_refresh_token(&oauth2::RefreshToken::new(refresh_token))
-                .request(&http_client)
-                .map_err(|e| {
-                    crate::Error::AuthenticationFailed(format!("Failed to refresh token: {e}"))
-                })?;
-
-            Ok(token_response)
-        })
-        .join()
-        .map_err(|_| {
-            crate::Error::AuthenticationFailed("Token refresh thread panicked".to_string())
-        })??;
+        // Exchange the refresh token for new tokens
+        let token_response = client
+            .exchange_refresh_token(&oauth2::RefreshToken::new(refresh_token))
+            .request_async(&http_client)
+            .await
+            .map_err(|e| {
+                crate::Error::AuthenticationFailed(format!("Failed to refresh token: {e}"))
+            })?;
 
         let id_token = token_response.extra_fields().id_token.clone();
 
