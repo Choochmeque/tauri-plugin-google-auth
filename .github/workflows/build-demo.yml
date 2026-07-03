@@ -79,19 +79,35 @@ jobs:
       - working-directory: examples/google-auth-demo
         run: pnpm install
       # `cargo-ndk` (used internally by `tauri android build`) needs
-      # `NDK_HOME` / `ANDROID_NDK_HOME`; setup-android only sets
-      # `ANDROID_NDK_LATEST_HOME`, so plumb it through.
+      # `NDK_HOME` / `ANDROID_NDK_HOME`. The runner image exposes
+      # `ANDROID_NDK_LATEST_HOME` only as a shell variable (not in the
+      # Actions expression context), so forward it at runtime.
       - working-directory: examples/google-auth-demo
-        env:
-          NDK_HOME: ${{ env.ANDROID_NDK_LATEST_HOME }}
-          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_LATEST_HOME }}
-        run: pnpm tauri android build --debug --apk --target aarch64
+        run: |
+          export NDK_HOME="$ANDROID_NDK_LATEST_HOME"
+          export ANDROID_NDK_HOME="$ANDROID_NDK_LATEST_HOME"
+          pnpm tauri android build --debug --apk --target aarch64
 
   ios:
     name: build-demo (ios)
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
+
+      - name: Select Xcode 26.5
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: "26.5"
+
+      - name: Remove MetalToolchain (Tauri + Xcode 26 fix)
+        run: |
+          for i in 1 2 3; do
+            sudo xcodebuild -downloadComponent MetalToolchain && break
+            echo "Attempt $i failed; sleeping 15s and retrying"
+            sleep 15
+          done || echo "MetalToolchain catalog fetch still failing; continuing in case the asset is already on disk"
+          sudo xcodebuild -deleteComponent MetalToolchain
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-ios-sim
