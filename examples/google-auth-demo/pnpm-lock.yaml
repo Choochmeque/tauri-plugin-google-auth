@@ -17,13 +17,13 @@ importers:
     devDependencies:
       '@sveltejs/vite-plugin-svelte':
         specifier: ^7.2.0
-        version: 7.2.0(svelte@5.56.7(@typescript-eslint/types@8.58.0))(vite@8.1.5(esbuild@0.27.2))
+        version: 7.2.0(svelte@5.56.8(@typescript-eslint/types@8.58.0))(vite@8.1.5(esbuild@0.27.2))
       '@tauri-apps/cli':
         specifier: ^2.11.1
         version: 2.11.2
       svelte:
-        specifier: ^5.56.7
-        version: 5.56.7(@typescript-eslint/types@8.58.0)
+        specifier: ^5.56.8
+        version: 5.56.8(@typescript-eslint/types@8.58.0)
       vite:
         specifier: ^8.1.5
         version: 8.1.5(esbuild@0.27.2)
@@ -580,8 +580,8 @@ packages:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
     engines: {node: '>=0.10.0'}
 
-  svelte@5.56.7:
-    resolution: {integrity: sha512-5qERUZX80oQj6XrDMUmD2Uhd/cIpCPDWWKBK3ZHmyRUC9apPyamWM8xMo31mbWsIQxwG2hVoSnOJ/EcnhVkkzQ==}
+  svelte@5.56.8:
+    resolution: {integrity: sha512-PY8LOw7xP6c8IOiVqdo0sbbZVYhXRSfklOQLAUyGBKqjTX0wx/z4l/9J+PmBpmlLnxzEb1NqltxQ5/wZme/Cmg==}
     engines: {node: '>=18'}
 
   tinyglobby@0.2.17:
@@ -828,12 +828,12 @@ snapshots:
     dependencies:
       acorn: 8.17.0
 
-  '@sveltejs/vite-plugin-svelte@7.2.0(svelte@5.56.7(@typescript-eslint/types@8.58.0))(vite@8.1.5(esbuild@0.27.2))':
+  '@sveltejs/vite-plugin-svelte@7.2.0(svelte@5.56.8(@typescript-eslint/types@8.58.0))(vite@8.1.5(esbuild@0.27.2))':
     dependencies:
       deepmerge: 4.3.1
       magic-string: 0.30.21
       obug: 2.1.3
-      svelte: 5.56.7(@typescript-eslint/types@8.58.0)
+      svelte: 5.56.8(@typescript-eslint/types@8.58.0)
       vite: 8.1.5(esbuild@0.27.2)
       vitefu: 1.1.3(vite@8.1.5(esbuild@0.27.2))
 
@@ -1053,7 +1053,7 @@ snapshots:
 
   source-map-js@1.2.1: {}
 
-  svelte@5.56.7(@typescript-eslint/types@8.58.0):
+  svelte@5.56.8(@typescript-eslint/types@8.58.0):
     dependencies:
       '@jridgewell/remapping': 2.3.5
       '@jridgewell/sourcemap-codec': 1.5.5
