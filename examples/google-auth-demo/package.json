@@ -10,13 +10,13 @@
     "tauri": "tauri"
   },
   "dependencies": {
-    "@tauri-apps/api": "^2.0.0",
-    "@choochmeque/tauri-plugin-google-auth-api": "file:../../"
+    "@choochmeque/tauri-plugin-google-auth-api": "file:../../",
+    "@tauri-apps/api": "^2.11.1"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^7.3.0",
+    "@tauri-apps/cli": "^2.11.1",
     "svelte": "^5.56.10",
-    "vite": "^8.2.2",
-    "@tauri-apps/cli": "^2.11.1"
+    "vite": "^8.2.2"
   }
 }
