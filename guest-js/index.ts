@@ -36,6 +36,7 @@ export interface SignInOptions {
   successHtmlResponse?: string;
   /** Authentication flow type (Android only, ignored on other platforms) */
   flowType?: "native" | "web";
+  accessType?: 'online' | 'offline';
 }
 
 /**

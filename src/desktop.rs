@@ -170,6 +170,10 @@ impl<R: Runtime> GoogleAuth<R> {
             auth_url_builder = auth_url_builder.add_scope(Scope::new(scope));
         }
 
+        if let Some(access_type) = &payload.access_type {
+            auth_url_builder = auth_url_builder.add_extra_param("access_type", access_type);
+        }
+
         let (authorize_url, _csrf_state) = auth_url_builder
             .set_pkce_challenge(pkce_code_challenge)
             .url();

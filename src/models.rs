@@ -26,6 +26,8 @@ pub struct SignInRequest {
     pub success_html_response: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub flow_type: Option<FlowType>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub access_type: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
