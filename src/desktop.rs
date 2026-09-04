@@ -174,6 +174,10 @@ impl<R: Runtime> GoogleAuth<R> {
             auth_url_builder = auth_url_builder.add_extra_param("access_type", access_type);
         }
 
+        if let Some(prompt) = &payload.prompt {
+            auth_url_builder = auth_url_builder.add_extra_param("prompt", prompt);
+        }
+
         let (authorize_url, _csrf_state) = auth_url_builder
             .set_pkce_challenge(pkce_code_challenge)
             .url();
