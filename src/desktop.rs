@@ -224,6 +224,25 @@ impl<R: Runtime> GoogleAuth<R> {
                     crate::Error::NetworkError(format!("Failed to parse redirect URL: {e}"))
                 })?;
 
+            if let Some((_, error_type)) = url.query_pairs().find(|(key, _)| key == "error") {
+                let error_desc = url
+                    .query_pairs()
+                    .find(|(key, _)| key == "error_description")
+                    .map(|(_, v)| v.into_owned())
+                    .unwrap_or_default();
+
+                let response = format!(
+                    "HTTP/1.1 200 OK\r\ncontent-length: {}\r\n\r\n{}",
+                    success_message.len(),
+                    success_message
+                );
+                stream.get_mut().write_all(response.as_bytes()).await?;
+
+                return Err(crate::Error::AuthenticationFailed(format!(
+                    "Google OAuth error: {error_type} - {error_desc}"
+                )));
+            }
+
             let code = url
                 .query_pairs()
                 .find(|(key, _)| key == "code")
