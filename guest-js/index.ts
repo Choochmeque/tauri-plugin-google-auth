@@ -37,7 +37,8 @@ export interface SignInOptions {
   /** Authentication flow type (Android only, ignored on other platforms) */
   flowType?: "native" | "web";
   accessType?: 'online' | 'offline';
-  prompt?: 'none' | 'consent' | 'select_account';
+  accessType?: "online" | "offline";
+  prompt?: "none" | "consent" | "select_account";
 }
 
 /**
