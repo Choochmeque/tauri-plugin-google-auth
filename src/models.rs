@@ -10,6 +10,7 @@ pub enum FlowType {
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct SignInRequest {
     pub client_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
