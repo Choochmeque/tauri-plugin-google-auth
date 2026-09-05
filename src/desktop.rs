@@ -16,7 +16,9 @@ use url::Url;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpListener;
 
-use crate::models::{RefreshTokenRequest, SignInRequest, SignOutRequest, SignOutResponse};
+use crate::models::{
+    AccessType, Prompt, RefreshTokenRequest, SignInRequest, SignOutRequest, SignOutResponse,
+};
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 pub struct GoogleTokenFields {
@@ -170,6 +172,24 @@ impl<R: Runtime> GoogleAuth<R> {
             auth_url_builder = auth_url_builder.add_scope(Scope::new(scope));
         }
 
+        if let Some(access_type) = &payload.access_type {
+            let val = match access_type {
+                AccessType::Online => "online",
+                AccessType::Offline => "offline",
+            };
+            auth_url_builder = auth_url_builder.add_extra_param("access_type", val);
+        }
+
+        if let Some(prompt) = &payload.prompt {
+            let val = match prompt {
+                Prompt::None => "none",
+                Prompt::Consent => "consent",
+                Prompt::SelectAccount => "select_account",
+                Prompt::ConsentAndSelect => "consent select_account",
+            };
+            auth_url_builder = auth_url_builder.add_extra_param("prompt", val);
+        }
+
         let (authorize_url, _csrf_state) = auth_url_builder
             .set_pkce_challenge(pkce_code_challenge)
             .url();
@@ -203,6 +223,25 @@ impl<R: Runtime> GoogleAuth<R> {
                 .map_err(|e| {
                     crate::Error::NetworkError(format!("Failed to parse redirect URL: {e}"))
                 })?;
+
+            if let Some((_, error_type)) = url.query_pairs().find(|(key, _)| key == "error") {
+                let error_desc = url
+                    .query_pairs()
+                    .find(|(key, _)| key == "error_description")
+                    .map(|(_, v)| v.into_owned())
+                    .unwrap_or_default();
+
+                let response = format!(
+                    "HTTP/1.1 200 OK\r\ncontent-length: {}\r\n\r\n{}",
+                    success_message.len(),
+                    success_message
+                );
+                stream.get_mut().write_all(response.as_bytes()).await?;
+
+                return Err(crate::Error::AuthenticationFailed(format!(
+                    "Google OAuth error: {error_type} - {error_desc}"
+                )));
+            }
 
             let code = url
                 .query_pairs()

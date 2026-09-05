@@ -202,14 +202,16 @@ const response = await signIn({
 
 ```typescript
 interface SignInOptions {
-  clientId: string;              // Required: Google OAuth client ID
-  clientSecret?: string;         // Required for desktop, Android web flow
-  scopes?: string[];             // OAuth scopes to request
-  hostedDomain?: string;         // Restrict authentication to a specific domain
-  loginHint?: string;            // Email hint to pre-fill in the sign-in form
-  redirectUri?: string;          // Custom redirect URI (desktop: localhost only)
-  successHtmlResponse?: string;  // Custom HTML shown after auth (desktop only)
-  flowType?: 'native' | 'web';   // Android only, default: 'native'. See ANDROID_SETUP.md
+    clientId: string;                  // Required: Google OAuth client ID
+    clientSecret?: string;             // Required for desktop, Android web     flow
+    scopes?: string[];                 // OAuth scopes to request
+    hostedDomain?: string;             // Restrict authentication to a  specific domain
+    loginHint?: string;                // Email hint to pre-fill in the     sign-in form
+    redirectUri?: string;              // Custom redirect URI (desktop:     localhost only)
+    successHtmlResponse?: string;      // Custom HTML shown after auth  (desktop only)
+    flowType?: 'native' | 'web';       // Android only, default: 'native'.  See ANDROID_SETUP.md
+    accessType?: 'offline' | 'online'; // Desktop only, default: 'online'.  Use 'offline' to get refreshToken
+    prompt?: 'none' | 'consent' | 'select_account' | 'consent select_account'
 }
 ```
 
