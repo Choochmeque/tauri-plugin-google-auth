@@ -16,7 +16,9 @@ use url::Url;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpListener;
 
-use crate::models::{RefreshTokenRequest, SignInRequest, SignOutRequest, SignOutResponse};
+use crate::models::{
+    AccessType, Prompt, RefreshTokenRequest, SignInRequest, SignOutRequest, SignOutResponse,
+};
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 pub struct GoogleTokenFields {
@@ -171,11 +173,21 @@ impl<R: Runtime> GoogleAuth<R> {
         }
 
         if let Some(access_type) = &payload.access_type {
-            auth_url_builder = auth_url_builder.add_extra_param("access_type", access_type);
+            let val = match access_type {
+                AccessType::Online => "online",
+                AccessType::Offline => "offline",
+            };
+            auth_url_builder = auth_url_builder.add_extra_param("access_type", val);
         }
 
         if let Some(prompt) = &payload.prompt {
-            auth_url_builder = auth_url_builder.add_extra_param("prompt", prompt);
+            let val = match prompt {
+                Prompt::None => "none",
+                Prompt::Consent => "consent",
+                Prompt::SelectAccount => "select_account",
+                Prompt::ConsentAndSelect => "consent select_account",
+            };
+            auth_url_builder = auth_url_builder.add_extra_param("prompt", val);
         }
 
         let (authorize_url, _csrf_state) = auth_url_builder

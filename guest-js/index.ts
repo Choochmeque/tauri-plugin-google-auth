@@ -39,6 +39,7 @@ export interface SignInOptions {
   accessType?: 'online' | 'offline';
   accessType?: "online" | "offline";
   prompt?: "none" | "consent" | "select_account";
+  prompt?: "none" | "consent" | "select_account" | "consent select_account" | "select_account consent";
 }
 
 /**

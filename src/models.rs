@@ -8,6 +8,26 @@ pub enum FlowType {
     Web,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum AccessType {
+    #[default]
+    Online,
+    Offline,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum Prompt {
+    #[default]
+    None,
+    Consent,
+    #[serde(rename = "select_account")]
+    SelectAccount,
+    #[serde(rename = "consent select_account", alias = "select_account consent")]
+    ConsentAndSelect,
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
@@ -28,9 +48,9 @@ pub struct SignInRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub flow_type: Option<FlowType>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub access_type: Option<String>,
+    pub access_type: Option<AccessType>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub prompt: Option<String>,
+    pub prompt: Option<Prompt>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
