@@ -237,11 +237,10 @@ impl<R: Runtime> GoogleAuth<R> {
                     format!("Google OAuth error: {error_type} - {error_desc}")
                 };
 
-                let error_html = format!("<h1>Authentication Failed</h1><p>{message}</p>");
                 let response = format!(
-                    "HTTP/1.1 200 OK\r\ncontent-type: text/html\r\ncontent-length: {}\r\n\r\n{}",
-                    error_html.len(),
-                    error_html
+                    "HTTP/1.1 200 OK\r\ncontent-type: text/plain\r\ncontent-length: {}\r\n\r\n{}",
+                    message.len(),
+                    message
                 );
                 stream.get_mut().write_all(response.as_bytes()).await?;
 
