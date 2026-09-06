@@ -36,9 +36,9 @@ export interface SignInOptions {
   successHtmlResponse?: string;
   /** Authentication flow type (Android only, ignored on other platforms) */
   flowType?: "native" | "web";
-  /** Access type for requesting a refresh_token for offline access (desktop/iOS only) */
+  /** Access type for requesting a refresh_token for offline access (desktop only) */
   accessType?: "online" | "offline";
-  /** Specifies whether to prompt the user for re-authentication (desktop/iOS only) */
+  /** Specifies whether to prompt the user for re-authentication (desktop only) */
   prompt?:
     | "none"
     | "consent"
