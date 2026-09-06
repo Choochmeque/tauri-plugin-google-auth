@@ -231,16 +231,21 @@ impl<R: Runtime> GoogleAuth<R> {
                     .map(|(_, v)| v.into_owned())
                     .unwrap_or_default();
 
+                let message = if error_desc.is_empty() {
+                    format!("Google OAuth error: {error_type}")
+                } else {
+                    format!("Google OAuth error: {error_type} - {error_desc}")
+                };
+
+                let error_html = format!("<h1>Authentication Failed</h1><p>{message}</p>");
                 let response = format!(
-                    "HTTP/1.1 200 OK\r\ncontent-length: {}\r\n\r\n{}",
-                    success_message.len(),
-                    success_message
+                    "HTTP/1.1 200 OK\r\ncontent-type: text/html\r\ncontent-length: {}\r\n\r\n{}",
+                    error_html.len(),
+                    error_html
                 );
                 stream.get_mut().write_all(response.as_bytes()).await?;
 
-                return Err(crate::Error::AuthenticationFailed(format!(
-                    "Google OAuth error: {error_type} - {error_desc}"
-                )));
+                return Err(crate::Error::AuthenticationFailed(message));
             }
 
             let code = url
