@@ -26,6 +26,8 @@ class GoogleSignInActivity : AppCompatActivity() {
     private var clientId: String? = null
     private var clientSecret: String? = null
     private var redirectUri: String? = null
+    private var accessType: String? = null
+    private var prompt: String? = null
     private lateinit var scopes: Array<String>
     
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,6 +37,8 @@ class GoogleSignInActivity : AppCompatActivity() {
         clientId = intent.getStringExtra(GoogleSignInPlugin.CLIENT_ID)
         clientSecret = intent.getStringExtra(GoogleSignInPlugin.CLIENT_SECRET)
         redirectUri = intent.getStringExtra(GoogleSignInPlugin.REDIRECT_URI)
+        accessType = intent.getStringExtra(GoogleSignInPlugin.ACCESS_TYPE)
+        prompt = intent.getStringExtra(GoogleSignInPlugin.PROMPT)
         scopes = intent.getStringArrayExtra(GoogleSignInPlugin.SCOPES) ?: emptyArray()
 
         if (clientId == null) {
@@ -65,10 +69,15 @@ class GoogleSignInActivity : AppCompatActivity() {
             requestedScopes.add(Scope(scope))
         }
 
-        val authorizationRequest = AuthorizationRequest.Builder()
+        val builder = AuthorizationRequest.Builder()
             .setRequestedScopes(requestedScopes)
-            .requestOfflineAccess(clientId!!)
-            .build()
+        // Offline access stays the web-flow default (this flow exchanges the code for a refresh
+        // token); accessType == "online" opts out. prompt containing "consent" forces a fresh
+        // consent screen so Google re-issues a refresh token on repeat sign-ins.
+        if (accessType != "online") {
+            builder.requestOfflineAccess(clientId!!, prompt?.contains("consent") == true)
+        }
+        val authorizationRequest = builder.build()
         
         authorizationClient.authorize(authorizationRequest)
             .addOnSuccessListener { authorizationResult ->
@@ -98,7 +107,13 @@ class GoogleSignInActivity : AppCompatActivity() {
                         val scopeStrings = grantedScopes.map { scope -> scope.toString() }.toTypedArray()
                         finishWithSuccess(serverAuthCode, scopeStrings)
                     } else if (accessToken != null) {
-                        finishWithError("Authorization flow did not return auth code")
+                        if (accessType == "online") {
+                            // online grants have no auth code by design: the access token is the result
+                            val scopeStrings = grantedScopes.map { scope -> scope.toString() }.toTypedArray()
+                            finishWithAccessToken(accessToken, scopeStrings)
+                        } else {
+                            finishWithError("Authorization flow did not return auth code")
+                        }
                     } else {
                         finishWithError("No authorization code or access token received")
                     }
@@ -161,7 +176,13 @@ class GoogleSignInActivity : AppCompatActivity() {
                     val scopeStrings = grantedScopes.map { scope -> scope.toString() }.toTypedArray()
                     finishWithSuccess(serverAuthCode, scopeStrings)
                 } else if (accessToken != null) {
-                    finishWithError("Authorization flow did not return auth code. Ensure offline access is requested.")
+                    if (accessType == "online") {
+                        // online grants have no auth code by design: the access token is the result
+                        val scopeStrings = grantedScopes.map { scope -> scope.toString() }.toTypedArray()
+                        finishWithAccessToken(accessToken, scopeStrings)
+                    } else {
+                        finishWithError("Authorization flow did not return auth code. Ensure offline access is requested.")
+                    }
                 } else {
                     finishWithError("No authorization code received")
                 }
@@ -193,6 +214,16 @@ class GoogleSignInActivity : AppCompatActivity() {
         finish()
     }
     
+    private fun finishWithAccessToken(accessToken: String, grantedScopes: Array<String>) {
+        val intent = Intent().apply {
+            val prefix = GoogleSignInPlugin.RESULT_EXTRA_PREFIX
+            putExtra(prefix + GoogleSignInPlugin.ACCESS_TOKEN, accessToken)
+            putExtra(prefix + GoogleSignInPlugin.GRANTED_SCOPES, grantedScopes)
+        }
+        setResult(RESULT_OK, intent)
+        finish()
+    }
+
     private fun finishWithError(errorMessage: String) {
         val intent = Intent().apply {
             val prefix = GoogleSignInPlugin.RESULT_EXTRA_PREFIX

@@ -210,8 +210,8 @@ interface SignInOptions {
   redirectUri?: string;               // Custom redirect URI (desktop: localhost only)
   successHtmlResponse?: string;       // Custom HTML shown after auth (desktop only)
   flowType?: 'native' | 'web';        // Android only, default: 'native'. See ANDROID_SETUP.md
-  accessType?: 'offline' | 'online';  // Desktop only, default: 'online'. Use 'offline' to get refreshToken
-  prompt?:                            // Desktop only. Use 'consent' to force re-consent and get refreshToken
+  accessType?: 'offline' | 'online';  // 'offline' requests a refreshToken. Defaults: 'online' on desktop and Android native flow, 'offline' on iOS and Android web flow. Android needs clientSecret for the refreshToken
+  prompt?:                            // Desktop/iOS: all values. Android: only 'consent' (forces re-consent), others ignored
     | 'none' 
     | 'consent' 
     | 'select_account' 
