@@ -3790,7 +3790,7 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-google-auth"
-version = "0.6.0-rc.4"
+version = "0.6.0-rc.5"
 dependencies = [
  "oauth2",
  "open",
