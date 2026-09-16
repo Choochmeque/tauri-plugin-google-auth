@@ -46,6 +46,8 @@ class SignInArgs {
     var loginHint: String? = null
     var redirectUri: String? = ""
     var flowType: String? = null
+    var accessType: String? = null
+    var prompt: String? = null
 }
 
 @InvokeArg
@@ -79,6 +81,9 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
         const val AUTH_CODE = "authCode"
         const val GRANTED_SCOPES = "grantedScopes"
         const val ERROR_MESSAGE = "errorMessage"
+        const val ACCESS_TYPE = "accessType"
+        const val PROMPT = "prompt"
+        const val ACCESS_TOKEN = "accessToken"
         
         var RESULT_EXTRA_PREFIX = ""
     }
@@ -111,7 +116,8 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
             }
 
             if (args.flowType == "web") {
-                if (args.clientSecret == null) {
+                // online sign-ins never exchange a code, so they need no secret
+                if (args.clientSecret == null && args.accessType != "online") {
                     invoke.reject("clientSecret is required for web flow")
                     return
                 }
@@ -133,11 +139,18 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
             putExtra(REDIRECT_URI, args.redirectUri)
             putExtra(TITLE, "Sign in with Google")
             putExtra(SUBTITLE, "Choose an account")
+            putExtra(ACCESS_TYPE, args.accessType)
+            putExtra(PROMPT, args.prompt)
         }
         startActivityForResult(invoke, intent, "signInResult")
     }
 
     private fun signInNative(invoke: Invoke, args: SignInArgs) {
+        // pending* below is singleton state; a second concurrent sign-in would clobber it
+        if (pendingNativeInvoke != null) {
+            invoke.reject("A sign-in is already in progress")
+            return
+        }
         scope.launch {
             try {
                 // Step 1: Get ID token via CredentialManager (using main activity)
@@ -156,7 +169,7 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
                 val idToken = googleIdTokenCredential.idToken
 
                 // Step 2: Get access token via AuthorizationClient
-                startNativeAuthorization(invoke, idToken, args.scopes)
+                startNativeAuthorization(invoke, idToken, args)
 
             } catch (e: GetCredentialCancellationException) {
                 invoke.reject("Sign-in cancelled: ${e.message}")
@@ -172,11 +185,17 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
 
     private var pendingNativeInvoke: Invoke? = null
     private var pendingIdToken: String? = null
+    private var pendingArgs: SignInArgs? = null
 
-    private fun startNativeAuthorization(invoke: Invoke, idToken: String, scopes: List<String>) {
-        val authRequest = AuthorizationRequest.builder()
-            .setRequestedScopes(scopes.map { Scope(it) })
-            .build()
+    private fun startNativeAuthorization(invoke: Invoke, idToken: String, args: SignInArgs) {
+        val builder = AuthorizationRequest.builder()
+            .setRequestedScopes(args.scopes.map { Scope(it) })
+        // The native flow historically never requested offline access, so it stays opt-in here;
+        // prompt containing "consent" forces a fresh consent screen and a new refresh token.
+        if (args.accessType == "offline") {
+            builder.requestOfflineAccess(args.clientId, args.prompt?.contains("consent") == true)
+        }
+        val authRequest = builder.build()
 
         authorizationClient.authorize(authRequest)
             .addOnSuccessListener { authResult ->
@@ -186,6 +205,7 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
                         // Need to launch activity for user consent
                         pendingNativeInvoke = invoke
                         pendingIdToken = idToken
+                        pendingArgs = args
                         val intent = Intent(activity, NativeSignInActivity::class.java).apply {
                             putExtra(NativeSignInActivity.EXTRA_PENDING_INTENT, pendingIntent)
                         }
@@ -198,7 +218,9 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
                     val accessToken = authResult.accessToken
                     if (accessToken != null) {
                         val grantedScopes = authResult.grantedScopes.map { it.toString() }.toTypedArray()
-                        resolveNativeSignIn(invoke, idToken, accessToken, grantedScopes)
+                        resolveNativeSignInMaybeExchange(
+                            invoke, idToken, accessToken, grantedScopes, authResult.serverAuthCode, args
+                        )
                     } else {
                         invoke.reject("Failed to get access token")
                     }
@@ -207,6 +229,37 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
             .addOnFailureListener { e ->
                 invoke.reject("Authorization failed [${e.javaClass.simpleName}]: ${e.message}")
             }
+    }
+
+    // Offline access in the native flow yields a serverAuthCode; exchanging it for a refresh
+    // token needs the clientSecret (same as the web flow). Without one, the sign-in still
+    // resolves with the access token only.
+    private fun resolveNativeSignInMaybeExchange(
+        invoke: Invoke,
+        idToken: String?,
+        accessToken: String,
+        grantedScopes: Array<String>,
+        serverAuthCode: String?,
+        args: SignInArgs?
+    ) {
+        val clientSecret = args?.clientSecret
+        if (serverAuthCode == null || clientSecret == null || args == null) {
+            if (serverAuthCode != null) {
+                Log.w(TAG, "serverAuthCode received but no clientSecret provided; refresh token unavailable")
+            }
+            resolveNativeSignIn(invoke, idToken, accessToken, grantedScopes)
+            return
+        }
+        scope.launch {
+            try {
+                // serverAuthCode grants are exchanged without a redirect URI
+                val tokenResponse = exchangeAuthCodeForTokens(serverAuthCode, args.clientId, clientSecret, "")
+                invoke.resolve(createTokenResponse(tokenResponse))
+            } catch (e: Exception) {
+                Log.e(TAG, "Auth code exchange failed, resolving with access token only", e)
+                resolveNativeSignIn(invoke, idToken, accessToken, grantedScopes)
+            }
+        }
     }
 
     private fun resolveNativeSignIn(invoke: Invoke, idToken: String?, accessToken: String, grantedScopes: Array<String>) {
@@ -225,8 +278,10 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
     @ActivityCallback
     private fun nativeAuthorizationResult(invoke: Invoke, result: ActivityResult) {
         val idToken = pendingIdToken
+        val args = pendingArgs
         pendingNativeInvoke = null
         pendingIdToken = null
+        pendingArgs = null
 
         if (result.resultCode == Activity.RESULT_CANCELED) {
             val error = result.data?.getStringExtra(NativeSignInActivity.RESULT_ERROR)
@@ -242,13 +297,16 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
 
         val accessToken = data.getStringExtra(NativeSignInActivity.RESULT_ACCESS_TOKEN)
         val grantedScopes = data.getStringArrayExtra(NativeSignInActivity.RESULT_GRANTED_SCOPES)
+        val serverAuthCode = data.getStringExtra(NativeSignInActivity.RESULT_SERVER_AUTH_CODE)
 
         if (accessToken == null) {
             invoke.reject("No access token received")
             return
         }
 
-        resolveNativeSignIn(invoke, idToken, accessToken, grantedScopes ?: emptyArray())
+        resolveNativeSignInMaybeExchange(
+            invoke, idToken, accessToken, grantedScopes ?: emptyArray(), serverAuthCode, args
+        )
     }
     
     @ActivityCallback
@@ -280,6 +338,13 @@ class GoogleSignInPlugin(private val activity: Activity) : Plugin(activity) {
 
         val authCode = data.getStringExtra(RESULT_EXTRA_PREFIX + AUTH_CODE)
         if (authCode == null) {
+            // accessType == "online": the activity returns the access token directly, no code to exchange
+            val accessToken = data.getStringExtra(RESULT_EXTRA_PREFIX + ACCESS_TOKEN)
+            if (accessToken != null) {
+                val grantedScopes = data.getStringArrayExtra(RESULT_EXTRA_PREFIX + GRANTED_SCOPES)
+                resolveNativeSignIn(invoke, null, accessToken, grantedScopes ?: emptyArray())
+                return
+            }
             invoke.reject("No authorization code received")
             return
         }

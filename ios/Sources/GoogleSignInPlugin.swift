@@ -8,6 +8,8 @@ class SignInArgs: Decodable {
     let scopes: [String]?
     let hostedDomain: String?
     let loginHint: String?
+    let accessType: String?
+    let prompt: String?
 }
 
 class SignOutArgs: Decodable {
@@ -39,8 +41,22 @@ class GoogleSignInPlugin: Plugin {
 
             SimpleGoogleSignIn.shared.configure(configuration: configuration)
 
+            // .offline is the historical default on iOS; "online" opts out of the refresh token.
+            let accessType: GoogleAccessType = args.accessType == "online" ? .online : .offline
+
+            // Optional<GooglePrompt> makes a bare `.none` resolve to Optional.none, so spell the enum out.
+            var prompt: GooglePrompt?
+            switch args.prompt {
+            case "none": prompt = GooglePrompt.none
+            case "consent": prompt = .consent
+            case "select_account": prompt = .selectAccount
+            case "consent select_account", "select_account consent": prompt = .consentAndSelectAccount
+            default: prompt = nil
+            }
+
             SimpleGoogleSignIn.shared.signIn(
-                presentingViewController: rootViewController, scopes: scopes
+                presentingViewController: rootViewController, scopes: scopes,
+                accessType: accessType, prompt: prompt
             ) { result in
                 DispatchQueue.main.async {
                     switch result {

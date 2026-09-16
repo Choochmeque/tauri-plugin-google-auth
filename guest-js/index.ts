@@ -36,9 +36,9 @@ export interface SignInOptions {
   successHtmlResponse?: string;
   /** Authentication flow type (Android only, ignored on other platforms) */
   flowType?: "native" | "web";
-  /** Access type for requesting a refresh_token for offline access (desktop only) */
+  /** Access type for the OAuth grant; 'offline' requests a refreshToken. Defaults: 'online' on desktop and the Android native flow, 'offline' on iOS and the Android web flow. On Android a refreshToken also requires clientSecret */
   accessType?: "online" | "offline";
-  /** Specifies whether to prompt the user for re-authentication (desktop only) */
+  /** Re-authentication prompt. All values work on desktop and iOS; Android supports only 'consent' (forces a fresh consent screen), other values are ignored there */
   prompt?:
     | "none"
     | "consent"

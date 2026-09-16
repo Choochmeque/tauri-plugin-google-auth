@@ -22,6 +22,7 @@ class NativeSignInActivity : ComponentActivity() {
 
         const val RESULT_ACCESS_TOKEN = "accessToken"
         const val RESULT_GRANTED_SCOPES = "grantedScopes"
+        const val RESULT_SERVER_AUTH_CODE = "serverAuthCode"
         const val RESULT_ERROR = "error"
     }
 
@@ -78,7 +79,7 @@ class NativeSignInActivity : ComponentActivity() {
 
             if (accessToken != null) {
                 val grantedScopes = authResult.grantedScopes.map { it.toString() }.toTypedArray()
-                finishWithSuccess(accessToken, grantedScopes)
+                finishWithSuccess(accessToken, grantedScopes, authResult.serverAuthCode)
             } else {
                 finishWithError("Failed to get access token from authorization result")
             }
@@ -87,10 +88,11 @@ class NativeSignInActivity : ComponentActivity() {
         }
     }
 
-    private fun finishWithSuccess(accessToken: String, grantedScopes: Array<String>) {
+    private fun finishWithSuccess(accessToken: String, grantedScopes: Array<String>, serverAuthCode: String?) {
         val intent = Intent().apply {
             putExtra(RESULT_ACCESS_TOKEN, accessToken)
             putExtra(RESULT_GRANTED_SCOPES, grantedScopes)
+            putExtra(RESULT_SERVER_AUTH_CODE, serverAuthCode)
         }
         setResult(RESULT_OK, intent)
         finish()

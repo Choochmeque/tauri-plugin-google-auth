@@ -12,6 +12,8 @@
   let clientSecret = $state('')
   let scopes = $state('openid,email,profile')
   let flowType = $state('native')
+  let accessType = $state('')
+  let prompt = $state('')
 
   function log(message, data = null) {
     const entry = {
@@ -37,7 +39,9 @@
         clientId,
         clientSecret: clientSecret || undefined,
         scopes: scopes.split(',').map(s => s.trim()).filter(Boolean),
-        flowType
+        flowType,
+        accessType: accessType || undefined,
+        prompt: prompt || undefined
       })
       tokens = result
       log('Sign-in successful', result)
@@ -149,6 +153,24 @@
       <select id="flowType" bind:value={flowType}>
         <option value="native">native</option>
         <option value="web">web</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="accessType">Access Type</label>
+      <select id="accessType" bind:value={accessType}>
+        <option value="">default</option>
+        <option value="online">online</option>
+        <option value="offline">offline</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="prompt">Prompt</label>
+      <select id="prompt" bind:value={prompt}>
+        <option value="">default</option>
+        <option value="none">none</option>
+        <option value="consent">consent</option>
+        <option value="select_account">select_account</option>
+        <option value="consent select_account">consent select_account</option>
       </select>
     </div>
   </section>
