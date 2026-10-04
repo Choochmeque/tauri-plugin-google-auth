@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "app.tauri.googleauth"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         minSdk = 21
