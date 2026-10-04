@@ -54,14 +54,12 @@ dependencies {
     implementation("androidx.security:security-crypto:1.1.0")
     
     // HTTP client for token exchange
-    // PINNED: okhttp 4.12.0 (Kotlin 1.9 compatible) - DO NOT upgrade to 5.x until Tauri uses Kotlin 2.x
     implementation("com.squareup.okhttp3:okhttp:5.5.0")
     
     // JSON parsing
     implementation("com.google.code.gson:gson:2.14.0")
     
     // Coroutines for async operations
-    // PINNED: 1.7.3 (Kotlin 1.9 compatible) - DO NOT upgrade to 1.8+ until Tauri uses Kotlin 2.x
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.11.0")
     
