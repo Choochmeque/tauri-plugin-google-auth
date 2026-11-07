@@ -57,7 +57,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:5.5.1")
     
     // JSON parsing
-    implementation("com.google.code.gson:gson:2.14.0")
+    implementation("com.google.code.gson:gson:2.15.0")
     
     // Coroutines for async operations
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
