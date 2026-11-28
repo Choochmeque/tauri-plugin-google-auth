@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@choochmeque/tauri-plugin-google-auth-api": "file:../../",
-    "@tauri-apps/api": "^2.11.1"
+    "@tauri-apps/api": "^2.12.5"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
