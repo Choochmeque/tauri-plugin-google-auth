@@ -183,10 +183,10 @@
           "markdownDescription": "Default core plugins set.\n#### This default permission set includes:\n\n- `core:path:default`\n- `core:event:default`\n- `core:window:default`\n- `core:webview:default`\n- `core:app:default`\n- `core:image:default`\n- `core:resources:default`\n- `core:menu:default`\n- `core:tray:default`"
         },
         {
-          "description": "Default permissions for the plugin.\n#### This default permission set includes:\n\n- `allow-version`\n- `allow-name`\n- `allow-tauri-version`\n- `allow-identifier`\n- `allow-bundle-type`\n- `allow-register-listener`\n- `allow-remove-listener`",
+          "description": "Default permissions for the plugin.\n#### This default permission set includes:\n\n- `allow-version`\n- `allow-name`\n- `allow-tauri-version`\n- `allow-identifier`\n- `allow-bundle-type`\n- `allow-register-listener`\n- `allow-remove-listener`\n- `allow-supports-multiple-windows`",
           "type": "string",
           "const": "core:app:default",
-          "markdownDescription": "Default permissions for the plugin.\n#### This default permission set includes:\n\n- `allow-version`\n- `allow-name`\n- `allow-tauri-version`\n- `allow-identifier`\n- `allow-bundle-type`\n- `allow-register-listener`\n- `allow-remove-listener`"
+          "markdownDescription": "Default permissions for the plugin.\n#### This default permission set includes:\n\n- `allow-version`\n- `allow-name`\n- `allow-tauri-version`\n- `allow-identifier`\n- `allow-bundle-type`\n- `allow-register-listener`\n- `allow-remove-listener`\n- `allow-supports-multiple-windows`"
         },
         {
           "description": "Enables the app_hide command without any pre-configured scope.",
@@ -213,10 +213,22 @@
           "markdownDescription": "Enables the default_window_icon command without any pre-configured scope."
         },
         {
+          "description": "Enables the exit command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:app:allow-exit",
+          "markdownDescription": "Enables the exit command without any pre-configured scope."
+        },
+        {
           "description": "Enables the fetch_data_store_identifiers command without any pre-configured scope.",
           "type": "string",
           "const": "core:app:allow-fetch-data-store-identifiers",
           "markdownDescription": "Enables the fetch_data_store_identifiers command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the fetch_profile_identifiers command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:app:allow-fetch-profile-identifiers",
+          "markdownDescription": "Enables the fetch_profile_identifiers command without any pre-configured scope."
         },
         {
           "description": "Enables the identifier command without any pre-configured scope.",
@@ -249,6 +261,12 @@
           "markdownDescription": "Enables the remove_listener command without any pre-configured scope."
         },
         {
+          "description": "Enables the remove_profile command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:app:allow-remove-profile",
+          "markdownDescription": "Enables the remove_profile command without any pre-configured scope."
+        },
+        {
           "description": "Enables the set_app_theme command without any pre-configured scope.",
           "type": "string",
           "const": "core:app:allow-set-app-theme",
@@ -259,6 +277,12 @@
           "type": "string",
           "const": "core:app:allow-set-dock-visibility",
           "markdownDescription": "Enables the set_dock_visibility command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the supports_multiple_windows command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:app:allow-supports-multiple-windows",
+          "markdownDescription": "Enables the supports_multiple_windows command without any pre-configured scope."
         },
         {
           "description": "Enables the tauri_version command without any pre-configured scope.",
@@ -297,10 +321,22 @@
           "markdownDescription": "Denies the default_window_icon command without any pre-configured scope."
         },
         {
+          "description": "Denies the exit command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:app:deny-exit",
+          "markdownDescription": "Denies the exit command without any pre-configured scope."
+        },
+        {
           "description": "Denies the fetch_data_store_identifiers command without any pre-configured scope.",
           "type": "string",
           "const": "core:app:deny-fetch-data-store-identifiers",
           "markdownDescription": "Denies the fetch_data_store_identifiers command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the fetch_profile_identifiers command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:app:deny-fetch-profile-identifiers",
+          "markdownDescription": "Denies the fetch_profile_identifiers command without any pre-configured scope."
         },
         {
           "description": "Denies the identifier command without any pre-configured scope.",
@@ -333,6 +369,12 @@
           "markdownDescription": "Denies the remove_listener command without any pre-configured scope."
         },
         {
+          "description": "Denies the remove_profile command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:app:deny-remove-profile",
+          "markdownDescription": "Denies the remove_profile command without any pre-configured scope."
+        },
+        {
           "description": "Denies the set_app_theme command without any pre-configured scope.",
           "type": "string",
           "const": "core:app:deny-set-app-theme",
@@ -343,6 +385,12 @@
           "type": "string",
           "const": "core:app:deny-set-dock-visibility",
           "markdownDescription": "Denies the set_dock_visibility command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the supports_multiple_windows command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:app:deny-supports-multiple-windows",
+          "markdownDescription": "Denies the supports_multiple_windows command without any pre-configured scope."
         },
         {
           "description": "Denies the tauri_version command without any pre-configured scope.",
@@ -747,10 +795,10 @@
           "markdownDescription": "Denies the text command without any pre-configured scope."
         },
         {
-          "description": "Default permissions for the plugin, which enables all commands.\n#### This default permission set includes:\n\n- `allow-resolve-directory`\n- `allow-resolve`\n- `allow-normalize`\n- `allow-join`\n- `allow-dirname`\n- `allow-extname`\n- `allow-basename`\n- `allow-is-absolute`",
+          "description": "Default permissions for the plugin, which enables all commands.\n#### This default permission set includes:\n\n- `allow-resolve-directory`\n- `allow-resolve-external-bin`\n- `allow-resolve`\n- `allow-normalize`\n- `allow-join`\n- `allow-dirname`\n- `allow-extname`\n- `allow-basename`\n- `allow-is-absolute`",
           "type": "string",
           "const": "core:path:default",
-          "markdownDescription": "Default permissions for the plugin, which enables all commands.\n#### This default permission set includes:\n\n- `allow-resolve-directory`\n- `allow-resolve`\n- `allow-normalize`\n- `allow-join`\n- `allow-dirname`\n- `allow-extname`\n- `allow-basename`\n- `allow-is-absolute`"
+          "markdownDescription": "Default permissions for the plugin, which enables all commands.\n#### This default permission set includes:\n\n- `allow-resolve-directory`\n- `allow-resolve-external-bin`\n- `allow-resolve`\n- `allow-normalize`\n- `allow-join`\n- `allow-dirname`\n- `allow-extname`\n- `allow-basename`\n- `allow-is-absolute`"
         },
         {
           "description": "Enables the basename command without any pre-configured scope.",
@@ -801,6 +849,12 @@
           "markdownDescription": "Enables the resolve_directory command without any pre-configured scope."
         },
         {
+          "description": "Enables the resolve_external_bin command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:path:allow-resolve-external-bin",
+          "markdownDescription": "Enables the resolve_external_bin command without any pre-configured scope."
+        },
+        {
           "description": "Denies the basename command without any pre-configured scope.",
           "type": "string",
           "const": "core:path:deny-basename",
@@ -849,6 +903,12 @@
           "markdownDescription": "Denies the resolve_directory command without any pre-configured scope."
         },
         {
+          "description": "Denies the resolve_external_bin command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:path:deny-resolve-external-bin",
+          "markdownDescription": "Denies the resolve_external_bin command without any pre-configured scope."
+        },
+        {
           "description": "Default permissions for the plugin, which enables all commands.\n#### This default permission set includes:\n\n- `allow-close`",
           "type": "string",
           "const": "core:resources:default",
@@ -867,10 +927,10 @@
           "markdownDescription": "Denies the close command without any pre-configured scope."
         },
         {
-          "description": "Default permissions for the plugin, which enables all commands.\n#### This default permission set includes:\n\n- `allow-new`\n- `allow-get-by-id`\n- `allow-remove-by-id`\n- `allow-set-icon`\n- `allow-set-menu`\n- `allow-set-tooltip`\n- `allow-set-title`\n- `allow-set-visible`\n- `allow-set-temp-dir-path`\n- `allow-set-icon-as-template`\n- `allow-set-show-menu-on-left-click`",
+          "description": "Default permissions for the plugin, which enables all commands.\n#### This default permission set includes:\n\n- `allow-new`\n- `allow-get-by-id`\n- `allow-remove-by-id`\n- `allow-set-icon`\n- `allow-set-menu`\n- `allow-set-tooltip`\n- `allow-set-title`\n- `allow-set-visible`\n- `allow-set-temp-dir-path`\n- `allow-set-icon-templated`\n- `allow-set-native-icon`\n- `allow-set-show-menu-on-left-click`\n- `allow-set-show-menu-on-right-click`\n- `allow-show-menu`\n- `allow-set-icon-as-template`\n- `allow-set-icon-with-as-template`",
           "type": "string",
           "const": "core:tray:default",
-          "markdownDescription": "Default permissions for the plugin, which enables all commands.\n#### This default permission set includes:\n\n- `allow-new`\n- `allow-get-by-id`\n- `allow-remove-by-id`\n- `allow-set-icon`\n- `allow-set-menu`\n- `allow-set-tooltip`\n- `allow-set-title`\n- `allow-set-visible`\n- `allow-set-temp-dir-path`\n- `allow-set-icon-as-template`\n- `allow-set-show-menu-on-left-click`"
+          "markdownDescription": "Default permissions for the plugin, which enables all commands.\n#### This default permission set includes:\n\n- `allow-new`\n- `allow-get-by-id`\n- `allow-remove-by-id`\n- `allow-set-icon`\n- `allow-set-menu`\n- `allow-set-tooltip`\n- `allow-set-title`\n- `allow-set-visible`\n- `allow-set-temp-dir-path`\n- `allow-set-icon-templated`\n- `allow-set-native-icon`\n- `allow-set-show-menu-on-left-click`\n- `allow-set-show-menu-on-right-click`\n- `allow-show-menu`\n- `allow-set-icon-as-template`\n- `allow-set-icon-with-as-template`"
         },
         {
           "description": "Enables the get_by_id command without any pre-configured scope.",
@@ -903,16 +963,40 @@
           "markdownDescription": "Enables the set_icon_as_template command without any pre-configured scope."
         },
         {
+          "description": "Enables the set_icon_templated command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:tray:allow-set-icon-templated",
+          "markdownDescription": "Enables the set_icon_templated command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the set_icon_with_as_template command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:tray:allow-set-icon-with-as-template",
+          "markdownDescription": "Enables the set_icon_with_as_template command without any pre-configured scope."
+        },
+        {
           "description": "Enables the set_menu command without any pre-configured scope.",
           "type": "string",
           "const": "core:tray:allow-set-menu",
           "markdownDescription": "Enables the set_menu command without any pre-configured scope."
         },
         {
+          "description": "Enables the set_native_icon command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:tray:allow-set-native-icon",
+          "markdownDescription": "Enables the set_native_icon command without any pre-configured scope."
+        },
+        {
           "description": "Enables the set_show_menu_on_left_click command without any pre-configured scope.",
           "type": "string",
           "const": "core:tray:allow-set-show-menu-on-left-click",
           "markdownDescription": "Enables the set_show_menu_on_left_click command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the set_show_menu_on_right_click command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:tray:allow-set-show-menu-on-right-click",
+          "markdownDescription": "Enables the set_show_menu_on_right_click command without any pre-configured scope."
         },
         {
           "description": "Enables the set_temp_dir_path command without any pre-configured scope.",
@@ -937,6 +1021,12 @@
           "type": "string",
           "const": "core:tray:allow-set-visible",
           "markdownDescription": "Enables the set_visible command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the show_menu command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:tray:allow-show-menu",
+          "markdownDescription": "Enables the show_menu command without any pre-configured scope."
         },
         {
           "description": "Denies the get_by_id command without any pre-configured scope.",
@@ -969,16 +1059,40 @@
           "markdownDescription": "Denies the set_icon_as_template command without any pre-configured scope."
         },
         {
+          "description": "Denies the set_icon_templated command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:tray:deny-set-icon-templated",
+          "markdownDescription": "Denies the set_icon_templated command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the set_icon_with_as_template command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:tray:deny-set-icon-with-as-template",
+          "markdownDescription": "Denies the set_icon_with_as_template command without any pre-configured scope."
+        },
+        {
           "description": "Denies the set_menu command without any pre-configured scope.",
           "type": "string",
           "const": "core:tray:deny-set-menu",
           "markdownDescription": "Denies the set_menu command without any pre-configured scope."
         },
         {
+          "description": "Denies the set_native_icon command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:tray:deny-set-native-icon",
+          "markdownDescription": "Denies the set_native_icon command without any pre-configured scope."
+        },
+        {
           "description": "Denies the set_show_menu_on_left_click command without any pre-configured scope.",
           "type": "string",
           "const": "core:tray:deny-set-show-menu-on-left-click",
           "markdownDescription": "Denies the set_show_menu_on_left_click command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the set_show_menu_on_right_click command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:tray:deny-set-show-menu-on-right-click",
+          "markdownDescription": "Denies the set_show_menu_on_right_click command without any pre-configured scope."
         },
         {
           "description": "Denies the set_temp_dir_path command without any pre-configured scope.",
@@ -1003,6 +1117,12 @@
           "type": "string",
           "const": "core:tray:deny-set-visible",
           "markdownDescription": "Denies the set_visible command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the show_menu command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:tray:deny-show-menu",
+          "markdownDescription": "Denies the show_menu command without any pre-configured scope."
         },
         {
           "description": "Default permissions for the plugin.\n#### This default permission set includes:\n\n- `allow-get-all-webviews`\n- `allow-webview-position`\n- `allow-webview-size`\n- `allow-internal-toggle-devtools`",
@@ -1227,10 +1347,16 @@
           "markdownDescription": "Denies the webview_size command without any pre-configured scope."
         },
         {
-          "description": "Default permissions for the plugin.\n#### This default permission set includes:\n\n- `allow-get-all-windows`\n- `allow-scale-factor`\n- `allow-inner-position`\n- `allow-outer-position`\n- `allow-inner-size`\n- `allow-outer-size`\n- `allow-is-fullscreen`\n- `allow-is-minimized`\n- `allow-is-maximized`\n- `allow-is-focused`\n- `allow-is-decorated`\n- `allow-is-resizable`\n- `allow-is-maximizable`\n- `allow-is-minimizable`\n- `allow-is-closable`\n- `allow-is-visible`\n- `allow-is-enabled`\n- `allow-title`\n- `allow-current-monitor`\n- `allow-primary-monitor`\n- `allow-monitor-from-point`\n- `allow-available-monitors`\n- `allow-cursor-position`\n- `allow-theme`\n- `allow-is-always-on-top`\n- `allow-internal-toggle-maximize`",
+          "description": "Default permissions for the plugin.\n#### This default permission set includes:\n\n- `allow-get-all-windows`\n- `allow-scale-factor`\n- `allow-inner-position`\n- `allow-outer-position`\n- `allow-inner-size`\n- `allow-outer-size`\n- `allow-is-fullscreen`\n- `allow-is-minimized`\n- `allow-is-maximized`\n- `allow-is-focused`\n- `allow-is-decorated`\n- `allow-is-resizable`\n- `allow-is-maximizable`\n- `allow-is-minimizable`\n- `allow-is-closable`\n- `allow-is-visible`\n- `allow-is-enabled`\n- `allow-title`\n- `allow-current-monitor`\n- `allow-primary-monitor`\n- `allow-monitor-from-point`\n- `allow-available-monitors`\n- `allow-cursor-position`\n- `allow-theme`\n- `allow-is-always-on-top`\n- `allow-activity-name`\n- `allow-scene-identifier`\n- `allow-internal-toggle-maximize`",
           "type": "string",
           "const": "core:window:default",
-          "markdownDescription": "Default permissions for the plugin.\n#### This default permission set includes:\n\n- `allow-get-all-windows`\n- `allow-scale-factor`\n- `allow-inner-position`\n- `allow-outer-position`\n- `allow-inner-size`\n- `allow-outer-size`\n- `allow-is-fullscreen`\n- `allow-is-minimized`\n- `allow-is-maximized`\n- `allow-is-focused`\n- `allow-is-decorated`\n- `allow-is-resizable`\n- `allow-is-maximizable`\n- `allow-is-minimizable`\n- `allow-is-closable`\n- `allow-is-visible`\n- `allow-is-enabled`\n- `allow-title`\n- `allow-current-monitor`\n- `allow-primary-monitor`\n- `allow-monitor-from-point`\n- `allow-available-monitors`\n- `allow-cursor-position`\n- `allow-theme`\n- `allow-is-always-on-top`\n- `allow-internal-toggle-maximize`"
+          "markdownDescription": "Default permissions for the plugin.\n#### This default permission set includes:\n\n- `allow-get-all-windows`\n- `allow-scale-factor`\n- `allow-inner-position`\n- `allow-outer-position`\n- `allow-inner-size`\n- `allow-outer-size`\n- `allow-is-fullscreen`\n- `allow-is-minimized`\n- `allow-is-maximized`\n- `allow-is-focused`\n- `allow-is-decorated`\n- `allow-is-resizable`\n- `allow-is-maximizable`\n- `allow-is-minimizable`\n- `allow-is-closable`\n- `allow-is-visible`\n- `allow-is-enabled`\n- `allow-title`\n- `allow-current-monitor`\n- `allow-primary-monitor`\n- `allow-monitor-from-point`\n- `allow-available-monitors`\n- `allow-cursor-position`\n- `allow-theme`\n- `allow-is-always-on-top`\n- `allow-activity-name`\n- `allow-scene-identifier`\n- `allow-internal-toggle-maximize`"
+        },
+        {
+          "description": "Enables the activity_name command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:window:allow-activity-name",
+          "markdownDescription": "Enables the activity_name command without any pre-configured scope."
         },
         {
           "description": "Enables the available_monitors command without any pre-configured scope.",
@@ -1425,6 +1551,12 @@
           "markdownDescription": "Enables the scale_factor command without any pre-configured scope."
         },
         {
+          "description": "Enables the scene_identifier command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:window:allow-scene-identifier",
+          "markdownDescription": "Enables the scene_identifier command without any pre-configured scope."
+        },
+        {
           "description": "Enables the set_always_on_bottom command without any pre-configured scope.",
           "type": "string",
           "const": "core:window:allow-set-always-on-bottom",
@@ -1525,6 +1657,12 @@
           "type": "string",
           "const": "core:window:allow-set-fullscreen",
           "markdownDescription": "Enables the set_fullscreen command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the set_fullscreen_on_monitor command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:window:allow-set-fullscreen-on-monitor",
+          "markdownDescription": "Enables the set_fullscreen_on_monitor command without any pre-configured scope."
         },
         {
           "description": "Enables the set_icon command without any pre-configured scope.",
@@ -1687,6 +1825,12 @@
           "type": "string",
           "const": "core:window:allow-unminimize",
           "markdownDescription": "Enables the unminimize command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the activity_name command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:window:deny-activity-name",
+          "markdownDescription": "Denies the activity_name command without any pre-configured scope."
         },
         {
           "description": "Denies the available_monitors command without any pre-configured scope.",
@@ -1881,6 +2025,12 @@
           "markdownDescription": "Denies the scale_factor command without any pre-configured scope."
         },
         {
+          "description": "Denies the scene_identifier command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:window:deny-scene-identifier",
+          "markdownDescription": "Denies the scene_identifier command without any pre-configured scope."
+        },
+        {
           "description": "Denies the set_always_on_bottom command without any pre-configured scope.",
           "type": "string",
           "const": "core:window:deny-set-always-on-bottom",
@@ -1981,6 +2131,12 @@
           "type": "string",
           "const": "core:window:deny-set-fullscreen",
           "markdownDescription": "Denies the set_fullscreen command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the set_fullscreen_on_monitor command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:window:deny-set-fullscreen-on-monitor",
+          "markdownDescription": "Denies the set_fullscreen_on_monitor command without any pre-configured scope."
         },
         {
           "description": "Denies the set_icon command without any pre-configured scope.",
