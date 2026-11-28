@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@tauri-apps/api':
         specifier: ^2.0.0
-        version: 2.12.5
+        version: 2.13.0
     devDependencies:
       '@tauri-apps/cli':
         specifier: ^2.8.1
@@ -144,8 +144,8 @@ packages:
   '@rolldown/pluginutils@1.1.1':
     resolution: {integrity: sha512-glFIJDvLNDtJhT9qrMFWLPbvS+skxgt4L0K8Ei2YtnhPysAJnsI7nyxSJxKj4ADeKX0OLjC4ntRkwpLOoS3rwA==}
 
-  '@tauri-apps/api@2.12.5':
-    resolution: {integrity: sha512-G9QIMt5fzED+aS4QhVK3w1HWLKpLIwH/MnpCr9z1ugGEHnS2ORmqrLkc0uALOjRK4qXJy+4Yiw8LDl/KicC1Hg==}
+  '@tauri-apps/api@2.13.0':
+    resolution: {integrity: sha512-O0uLpOZcFxbHMtkSv8sE6WNTuoUu4pOHtKQn0R6GPAFNJaOgaFa+LrR3emw1jRWA9ebVC8PZUS3Q2p881yFNrA==}
 
   '@tauri-apps/cli-darwin-arm64@2.12.6':
     resolution: {integrity: sha512-Uokwk1hFfJoG54+kD8iU0St33jAIkNvojnjEfBZ6UbL5rnM10AiFwUS/2DHTJ9R4/Kba4U44v7djfMuWFTQgeg==}
@@ -595,7 +595,7 @@ snapshots:
 
   '@rolldown/pluginutils@1.1.1': {}
 
-  '@tauri-apps/api@2.12.5': {}
+  '@tauri-apps/api@2.13.0': {}
 
   '@tauri-apps/cli-darwin-arm64@2.12.6':
     optional: true
